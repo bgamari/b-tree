@@ -25,34 +25,14 @@ import qualified Data.ByteString as BS
 import           Data.ByteString.Lazy (ByteString)
 
 import Pipes
-import Pipes.Core (respond, request)
+import Pipes.Core
 import qualified Pipes.Internal as PI
+import qualified Pipes.Prelude as PP
 
 import BTree.Types
 
-{-
-fromOrdered :: (Monad m, Ord k, Binary k, Binary v)
-                => Int -> Pipe (k,v) ByteString m r
-fromOrdered order = flip evalStateT 0 $ do
-    putStream $ B.encode header
-    forever leafs
-  where header = BTreeHeader magic (fromIntegral order) 0
-
-        leafs :: (Monad m, Binary k, Binary v)
-              => StateT Offset (Pipe (k,v) ByteString m) [Offset]
-        leafs = replicateM order $ do
-                   (k,v) <- lift await
-                   putStream $ B.encode (k,v)
-        
-        putStream :: (Monad m)
-                  => ByteString
-                  -> StateT Offset (Pipe (k,v) ByteString m) Offset
-        putStream bs = do
-            offset <- get
-            lift $ yield bs
-            modify (+ LBS.length bs)
-            return offset
--}
+-- | A Producer which accepts offsets for the yielded objects in return
+type DiskProducer a = Proxy X () (OnDisk a) a
 
 putBS :: (Binary a, Monad m) => Proxy (OnDisk a) a () LBS.ByteString m r
 putBS = evalStateT (forever go) 0
@@ -68,9 +48,6 @@ data DepthState k e = DepthS { _dNodes      :: !(Seq (k, OnDisk (BTree k OnDisk 
                              , _dMinFill    :: [Int]
                              }
 makeLenses ''DepthState
-
--- | A Producer which accepts offsets for the yielded objects in return
-type DiskProducer a = Proxy X () (OnDisk a) a
 
 data WithDepth a = WithDepth !Depth !a
 
@@ -98,21 +75,20 @@ optimalFill order size depth =
 buildNodes :: Monad m
            => Order -> Size
            -> DiskProducer (BLeaf k e) m r
-           -> DiskProducer (BTree k OnDisk e) m (Maybe r)
+           -> DiskProducer (BTree k OnDisk e) m (OnDisk (BTree k OnDisk e))
 buildNodes order size =
     flip evalStateT (map initialState [0..maxDepth]) . loop size
   where loop :: Monad m
              => Size -> DiskProducer (BLeaf k e) m r
-             -> StateT [DepthState k e] (DiskProducer (BTree k OnDisk e) m) (Maybe r)
+             -> StateT [DepthState k e] (DiskProducer (BTree k OnDisk e) m)
+                       (OnDisk (BTree k OnDisk e))
         loop n producer = do
             _next <- lift $ lift $ next' producer
             case _next of
               Left r  -> do
                 flushAll
-                return $ Just r
               Right (leaf, producer') | n == 0 -> do
                 flushAll
-                return Nothing
               Right (leaf, producer')  -> do
                 -- TODO: Is there a way to check this coercion with the type system?
                 OnDisk offset <- processNode $ Leaf leaf
@@ -171,3 +147,19 @@ buildNodes order size =
                          emitNode
               d:_  -> do when (not $ Seq.null $ d^.dNodes) $ void $ emitNode
                          zoom (singular _tail) flushAll
+
+dropUpstream :: Monad m => Proxy X () () b m r -> Proxy X () b' b m r
+dropUpstream = go
+  where go producer = do
+          n <- lift $ next producer
+          case n of
+            Left r               -> return r
+            Right (a, producer') -> respond a >> go producer'
+          
+fromOrdered :: (Binary e, Binary k, Monad m)
+            => Order -> Size
+            -> Producer (BLeaf k e) m r
+            -> Producer LBS.ByteString m ()
+fromOrdered order size producer = do
+    root <- dropUpstream $ buildNodes order size (dropUpstream producer) >>~ const putBS
+    yield $ Put.runPut $ B.put $ BTreeHeader magic 1 order size root

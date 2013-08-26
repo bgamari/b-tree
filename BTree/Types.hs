@@ -21,14 +21,15 @@ type Size = Word64
 type Order = Word64
 
 -- | B-tree file header
-data BTreeHeader = BTreeHeader { btMagic   :: !Word64
-                               , btVersion :: !Word64
-                               , btOrder   :: !Order
-                               , btSize    :: !Size
-                               }
+data BTreeHeader k e = BTreeHeader { btMagic   :: !Word64
+                                   , btVersion :: !Word64
+                                   , btOrder   :: !Order
+                                   , btSize    :: !Size
+                                   , btRoot    :: !(OnDisk (BTree k OnDisk e))
+                                   }
                  deriving (Show, Eq, Generic)
 
-instance Binary BTreeHeader
+instance Binary (BTreeHeader k e)
 
 -- | 'OnDisk a' is a reference to an object of type 'a' on disk
 newtype OnDisk a = OnDisk Offset
@@ -44,8 +45,8 @@ data BLeaf k e = BLeaf !k !e
 deriving instance (Eq k, Eq e) => Eq (BLeaf k e)
 deriving instance (Show k, Show e) => Show (BLeaf k e)
     
--- | 'BTree k f e' is a B* tree of key type 'k' with elements of type 'e' contained
--- within a functor 'f'
+-- | 'BTree k f e' is a B* tree of key type 'k' with elements of type 'e'.
+-- Subtree references are contained within a type 'f'
 data BTree k f e = Node (f (BTree k f e)) [(k, f (BTree k f e))]
                  | Leaf (BLeaf k e)
                  deriving (Generic)
