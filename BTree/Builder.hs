@@ -98,21 +98,24 @@ optimalFill order size depth =
 buildNodes :: Monad m
            => Order -> Size
            -> DiskProducer (BTree k OnDisk e) m r
-           -> DiskProducer (BTree k OnDisk e) m r
+           -> DiskProducer (BTree k OnDisk e) m (Maybe r)
 buildNodes order size =
-    flip evalStateT (map initialState [0..maxDepth]) . loop
+    flip evalStateT (map initialState [0..maxDepth]) . loop size
   where loop :: Monad m
-             => DiskProducer (BTree k OnDisk e) m r
-             -> StateT [DepthState k e] (DiskProducer (BTree k OnDisk e) m) r
-        loop producer = do
-            n <- lift $ lift $ next' producer
-            case n of
+             => Size -> DiskProducer (BTree k OnDisk e) m r
+             -> StateT [DepthState k e] (DiskProducer (BTree k OnDisk e) m) (Maybe r)
+        loop n producer = do
+            _next <- lift $ lift $ next' producer
+            case _next of
               Left r  -> do
                 flushAll
-                return r
+                return $ Just r
+              Right (tree, producer') | n == 0 -> do
+                flushAll
+                return Nothing
               Right (tree, producer')  -> do
                 offset <- processNode tree
-                loop $ producer' offset
+                loop (n-1) $ producer' offset
 
         initialState depth = DepthS Seq.empty 0 $ cycle $ optimalFill order size depth
         minFill = (order + 1) `div` 2
