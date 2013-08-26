@@ -11,6 +11,7 @@ import Control.Monad
 import Data.Foldable as F
 import qualified Data.Sequence as Seq
 import           Data.Sequence (Seq)
+
 import Data.Int
 import Data.Ratio
 import Control.Lens
@@ -99,7 +100,7 @@ buildNodes :: Monad m
            -> DiskProducer (BTree k OnDisk e) m r
            -> DiskProducer (BTree k OnDisk e) m r
 buildNodes order size =
-    flip evalStateT (map initialState [0..]) . loop
+    flip evalStateT (map initialState [0..maxDepth]) . loop
   where loop :: Monad m
              => DiskProducer (BTree k OnDisk e) m r
              -> StateT [DepthState k e] (DiskProducer (BTree k OnDisk e) m) r
@@ -142,13 +143,13 @@ buildNodes order size =
                               (DiskProducer (BTree k OnDisk e) m)
                               (OnDisk (BTree k OnDisk e))
         processNode tree = do
+            filled <- isFilled
+            when filled $ void $ emitNode
             use (singular _head . dMinFill . singular _head) >>= \n->when (n==0) $ error "uh oh"
             offset <- lift $ respond tree
             zoom _head $ do
                 dNodes %= (Seq.|> (treeStartKey tree, offset))
                 dNodeCount += 1
-            filled <- isFilled
-            when filled $ void $ emitNode
             return offset
 
         flushAll :: Monad m
@@ -157,11 +158,8 @@ buildNodes order size =
                            (OnDisk (BTree k OnDisk e))
         flushAll = do
             s <- get
-            let depthDone :: DepthState k e -> Bool
-                depthDone (DepthS _ 0 _) = True
-                depthDone _              = False
-            n <- emitNode
-            if depthDone (head $ tail s)
-              then return n
-              else do emitNode
-                      zoom (singular _tail) flushAll
+            case s of
+              [d]     -> do -- This shouldn't be empty
+                            emitNode
+              d:rest  -> do when (not $ Seq.null $ d^.dNodes) $ void $ emitNode
+                            zoom (singular _tail) flushAll
