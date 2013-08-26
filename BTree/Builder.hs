@@ -134,8 +134,12 @@ buildNodes order size =
                 dNodeCount .= 0
                 dMinFill %= tail
                 return nodes
-            zoom (singular _tail) $
-                processNode $ Node node0 nodes
+            s <- get
+            let newNode = Node node0 nodes
+            case s of
+              [x] -> lift $ respond newNode
+              _   -> zoom (singular _tail) $
+                         processNode newNode
 
         processNode :: Monad m
                     => BTree k OnDisk e
