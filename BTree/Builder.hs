@@ -2,6 +2,7 @@
 
 module BTree.Builder
     ( buildNodes, putBS
+    , fromOrdered
     ) where
 
 import Control.Monad.IO.Class
@@ -15,6 +16,7 @@ import           Data.Sequence (Seq)
 import Data.Int
 import Data.Ratio
 import Control.Lens
+import System.IO
 
 import qualified Data.Binary as B
 import qualified Data.Binary.Put as Put
@@ -148,6 +150,14 @@ buildNodes order size =
               d:_  -> do when (not $ Seq.null $ d^.dNodes) $ void $ emitNode
                          zoom (singular _tail) flushAll
 
+buildTree :: (Monad m, Binary e, Binary k)
+          => Order -> Size
+          -> Producer (BLeaf k e) m r
+          -> Producer ByteString m (BTreeHeader k e)
+buildTree order size producer = do
+    root <- dropUpstream $ buildNodes order size (dropUpstream producer) >>~ const putBS
+    return $ BTreeHeader magic 1 order size root
+
 dropUpstream :: Monad m => Proxy X () () b m r -> Proxy X () b' b m r
 dropUpstream = go
   where go producer = do
@@ -156,10 +166,18 @@ dropUpstream = go
             Left r               -> return r
             Right (a, producer') -> respond a >> go producer'
           
-fromOrdered :: (Binary e, Binary k, Monad m)
+fromOrdered :: (Binary e, Binary k)
             => Order -> Size
-            -> Producer (BLeaf k e) m r
-            -> Producer LBS.ByteString m ()
-fromOrdered order size producer = do
-    root <- dropUpstream $ buildNodes order size (dropUpstream producer) >>~ const putBS
-    yield $ Put.runPut $ B.put $ BTreeHeader magic 1 order size root
+            -> FilePath
+            -> Producer (BLeaf k e) IO r
+            -> IO ()
+fromOrdered order size fname producer =
+    withFile fname WriteMode $ \h->do
+    LBS.hPut h $ B.encode invalidHeader
+    hdr <- run $ for (buildTree order size producer) $ lift . LBS.hPut h
+    hSeek h AbsoluteSeek 0
+    LBS.hPut h $ B.encode hdr
+    return ()
+
+invalidHeader :: BTreeHeader () ()
+invalidHeader = BTreeHeader 0 0 0 0 (OnDisk 0xdeadbeef)
