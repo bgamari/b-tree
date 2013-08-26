@@ -53,8 +53,8 @@ instance (Binary k, Binary (f (BTree k f e)), Binary (f e))
              case typ of
                0 -> Node <$> get <*> get
                1 -> Leaf <$> get <*> get
-    put (Node e0 es) = put e0 >> put es
-    put (Leaf k0 e)  = put k0 >> put e
+    put (Node e0 es) = putWord8 0 >> put e0 >> put es
+    put (Leaf k0 e)  = putWord8 1 >> put k0 >> put e
 
 treeStartKey :: BTree k f e -> k
 treeStartKey (Node _ ((k,_):_)) = k

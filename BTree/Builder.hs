@@ -1,7 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}              
 
 module BTree.Builder
-    ( 
+    ( buildNodes, putBS
     ) where
 
 import Control.Monad.IO.Class
@@ -12,9 +12,11 @@ import Data.Foldable as F
 import qualified Data.Sequence as Seq
 import           Data.Sequence (Seq)
 import Data.Int
+import Data.Ratio
 import Control.Lens
 
 import qualified Data.Binary as B
+import qualified Data.Binary.Put as Put
 import           Data.Binary (Binary)
 
 import qualified Data.ByteString.Lazy as LBS
@@ -22,12 +24,12 @@ import qualified Data.ByteString as BS
 import           Data.ByteString.Lazy (ByteString)
 
 import Pipes
-import Pipes.Core (respond)
+import Pipes.Core (respond, request)
 import qualified Pipes.Internal as PI
 
 import BTree.Types
 
-{-       
+{-
 fromOrdered :: (Monad m, Ord k, Binary k, Binary v)
                 => Int -> Pipe (k,v) ByteString m r
 fromOrdered order = flip evalStateT 0 $ do
@@ -51,6 +53,13 @@ fromOrdered order = flip evalStateT 0 $ do
             return offset
 -}
 
+putBS :: (Binary a, Monad m) => Proxy (OnDisk a) a () LBS.ByteString m r
+putBS = evalStateT (forever go) 0
+  where go = do a <- get >>= lift . request . OnDisk
+                let bs = Put.runPut $ B.put a
+                id += LBS.length bs
+                lift $ yield bs
+
 type Depth = Int
 
 data DepthState k e = DepthS { _dNodes      :: !(Seq (k, OnDisk (BTree k OnDisk e)))
@@ -73,6 +82,10 @@ next' = go
         PI.M         m  -> m >>= go
         PI.Pure    r    -> return (Left r)
      
+simplify :: Integral a => Ratio a -> Ratio a
+simplify r = let n = gcd (numerator r) (denominator r)
+             in (numerator r `div` n) % (denominator r `div` n)
+
 buildNodes :: Monad m
            => Order -> Size
            -> DiskProducer (BTree k OnDisk e) m r
@@ -86,13 +99,19 @@ buildNodes order size =
             n <- lift $ lift $ next' producer
             case n of
               Left r  -> do
-                flushAll
+                --flushAll
                 return r
               Right (tree, producer')  -> do
                 offset <- processNode tree
                 loop $ producer' offset
 
-        initialState depth = DepthS Seq.empty 0 $ cycle [2] -- FIXME
+        initialState depth =
+            let (n,r) = properFraction $ simplify
+                        $ realToFrac size / realToFrac (order^depth)
+                low = denominator r
+                high = denominator r - numerator r
+            in DepthS Seq.empty 0 $ cycle
+               $ replicate low n ++ replicate high (n+1)
         minFill = (order + 1) `div` 2
         maxDepth = ceiling $ log (realToFrac size) / log (realToFrac order)
 
