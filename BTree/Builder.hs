@@ -86,12 +86,20 @@ simplify :: Integral a => Ratio a -> Ratio a
 simplify r = let n = gcd (numerator r) (denominator r)
              in (numerator r `div` n) % (denominator r `div` n)
 
+optimalFill :: Order -> Size -> Depth -> [Int]
+optimalFill order size depth = 
+    let (n,r) = properFraction $ simplify
+                $ realToFrac size / realToFrac (order^(depth+1))
+        high = denominator r
+        low = denominator r - numerator r
+    in map fromIntegral $ cycle $ replicate high ((n+1) * order^depth) ++ replicate low (n * order^depth)
+
 buildNodes :: Monad m
            => Order -> Size
            -> DiskProducer (BTree k OnDisk e) m r
            -> DiskProducer (BTree k OnDisk e) m r
 buildNodes order size =
-    flip evalStateT (map initialState [0..maxDepth]) . loop
+    flip evalStateT (map initialState [0..]) . loop
   where loop :: Monad m
              => DiskProducer (BTree k OnDisk e) m r
              -> StateT [DepthState k e] (DiskProducer (BTree k OnDisk e) m) r
@@ -99,19 +107,13 @@ buildNodes order size =
             n <- lift $ lift $ next' producer
             case n of
               Left r  -> do
-                --flushAll
+                flushAll
                 return r
               Right (tree, producer')  -> do
                 offset <- processNode tree
                 loop $ producer' offset
 
-        initialState depth =
-            let (n,r) = properFraction $ simplify
-                        $ realToFrac size / realToFrac (order^depth)
-                low = denominator r
-                high = denominator r - numerator r
-            in DepthS Seq.empty 0 $ cycle
-               $ replicate low n ++ replicate high (n+1)
+        initialState depth = DepthS Seq.empty 0 $ cycle $ optimalFill order size depth
         minFill = (order + 1) `div` 2
         maxDepth = ceiling $ log (realToFrac size) / log (realToFrac order)
 
@@ -140,6 +142,7 @@ buildNodes order size =
                               (DiskProducer (BTree k OnDisk e) m)
                               (OnDisk (BTree k OnDisk e))
         processNode tree = do
+            use (singular _head . dMinFill . singular _head) >>= \n->when (n==0) $ error "uh oh"
             offset <- lift $ respond tree
             zoom _head $ do
                 dNodes %= (Seq.|> (treeStartKey tree, offset))

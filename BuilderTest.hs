@@ -19,10 +19,10 @@ printUpstream = go
                                         go producer'
 
 main = do
-    let leaves = [ Leaf i (OnDisk $ 1000*i) | i <- [0..100] ] :: [BTree Int64 OnDisk Int64]
+    let leaves = [ Leaf i (OnDisk $ 1000*i) | i <- [0..94] ] :: [BTree Int64 OnDisk Int64]
         src :: Proxy X () (OnDisk (BTree Int64 OnDisk Int64)) (BTree Int64 OnDisk Int64) IO ()
         src = printUpstream $ each leaves
-    run $ for (buildNodes 10 100 src >>~ const putBS) $ lift . print . decodeNode
+    run $ for (buildNodes 10 95 src >>~ const putBS) $ lift . print . decodeNode
     return ()
 
 decodeNode :: LBS.ByteString -> BTree Int64 OnDisk Int64
