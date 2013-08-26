@@ -3,9 +3,10 @@ import qualified Data.ByteString.Lazy as LBS
 import BTree.Types
 import BTree.Builder
 import Pipes
-import Pipes.Prelude
+import Pipes.Prelude as PP
 import Pipes.Core
 import Control.Monad.IO.Class
+import Control.Monad (void)
 import Data.Int
 
 printUpstream :: (MonadIO m, Show a') => Producer a m r -> Proxy X () a' a m r
@@ -23,8 +24,8 @@ main = do
         leaves = [ BLeaf i (1000*i) | i <- [0..n-1] ] :: [BLeaf Int64 Int64]
         src :: Proxy X () (OnDisk (BLeaf Int64 Int64)) (BLeaf Int64 Int64) IO ()
         src = printUpstream $ each leaves
-    r <- run $ for (buildNodes 10 (fromIntegral n) src >>~ const putBS)
-             $ lift . print . decodeNode
+    r <- PP.fold LBS.append LBS.empty id
+             $ void (buildNodes 10 (fromIntegral n) src) >>~ const putBS
     print r
     return ()
 
