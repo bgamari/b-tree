@@ -38,24 +38,31 @@ instance Binary (OnDisk a) where
     get = OnDisk <$> get
     put (OnDisk off) = put off
 
+data BLeaf k e = BLeaf !k !e
+               deriving (Generic)
+               
+deriving instance (Eq k, Eq e) => Eq (BLeaf k e)
+deriving instance (Show k, Show e) => Show (BLeaf k e)
+    
 -- | 'BTree k f e' is a B* tree of key type 'k' with elements of type 'e' contained
 -- within a functor 'f'
 data BTree k f e = Node (f (BTree k f e)) [(k, f (BTree k f e))]
-                 | Leaf !k !(f e)
+                 | Leaf (BLeaf k e)
                  deriving (Generic)
-    
-deriving instance (Show (f e), Show k, Show (f (BTree k f e))) => Show (BTree k f e)
-deriving instance (Eq (f e), Eq k, Eq (f (BTree k f e))) => Eq (BTree k f e)
+     
+deriving instance (Show e, Show k, Show (f (BTree k f e))) => Show (BTree k f e)
+deriving instance (Eq e, Eq k, Eq (f (BTree k f e))) => Eq (BTree k f e)
 
-instance (Binary k, Binary (f (BTree k f e)), Binary (f e))
+instance (Binary k, Binary (f (BTree k f e)), Binary e)
   => Binary (BTree k f e) where
     get = do typ <- getWord8
              case typ of
                0 -> Node <$> get <*> get
-               1 -> Leaf <$> get <*> get
-    put (Node e0 es) = putWord8 0 >> put e0 >> put es
-    put (Leaf k0 e)  = putWord8 1 >> put k0 >> put e
+               1 -> bleaf <$> get <*> get
+      where bleaf k v = Leaf (BLeaf k v)
+    put (Node e0 es)         = putWord8 0 >> put e0 >> put es
+    put (Leaf (BLeaf k0 e))  = putWord8 1 >> put k0 >> put e
 
 treeStartKey :: BTree k f e -> k
 treeStartKey (Node _ ((k,_):_)) = k
-treeStartKey (Leaf k _)           = k
+treeStartKey (Leaf (BLeaf k _)) = k

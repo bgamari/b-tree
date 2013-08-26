@@ -97,12 +97,12 @@ optimalFill order size depth =
 
 buildNodes :: Monad m
            => Order -> Size
-           -> DiskProducer (BTree k OnDisk e) m r
+           -> DiskProducer (BLeaf k e) m r
            -> DiskProducer (BTree k OnDisk e) m (Maybe r)
 buildNodes order size =
     flip evalStateT (map initialState [0..maxDepth]) . loop size
   where loop :: Monad m
-             => Size -> DiskProducer (BTree k OnDisk e) m r
+             => Size -> DiskProducer (BLeaf k e) m r
              -> StateT [DepthState k e] (DiskProducer (BTree k OnDisk e) m) (Maybe r)
         loop n producer = do
             _next <- lift $ lift $ next' producer
@@ -110,12 +110,13 @@ buildNodes order size =
               Left r  -> do
                 flushAll
                 return $ Just r
-              Right (tree, producer') | n == 0 -> do
+              Right (leaf, producer') | n == 0 -> do
                 flushAll
                 return Nothing
-              Right (tree, producer')  -> do
-                offset <- processNode tree
-                loop (n-1) $ producer' offset
+              Right (leaf, producer')  -> do
+                -- TODO: Is there a way to check this coercion with the type system?
+                OnDisk offset <- processNode $ Leaf leaf
+                loop (n-1) $ producer' (OnDisk offset)
 
         initialState depth = DepthS Seq.empty 0 $ cycle $ optimalFill order size depth
         minFill = (order + 1) `div` 2

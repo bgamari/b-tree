@@ -11,7 +11,7 @@ import Data.Binary.Get (runGetOrFail)
 walk :: Monad m => Pipe LBS.ByteString (k,v) m ()
 walk = undefined
 
-walkNodes :: (Binary k, Monad m)
+walkNodes :: (Binary k, Binary v, Monad m)
           => LBS.ByteString -> Producer (BTree k OnDisk v) m (LBS.ByteString, Maybe String)
 walkNodes = go
   where go bs = case runGetOrFail get bs of
