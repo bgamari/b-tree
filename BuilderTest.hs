@@ -1,13 +1,16 @@
 import Data.Binary (decode)                
 import qualified Data.ByteString.Lazy as LBS
-import BTree.Types
-import BTree.Builder
-import Pipes
-import Pipes.Prelude as PP
-import Pipes.Core
 import Control.Monad.IO.Class
 import Control.Monad (void)
 import Data.Int
+
+import Pipes
+import Pipes.Prelude as PP
+import Pipes.Core
+
+import BTree.Walk
+import BTree.Types
+import BTree.Builder
 
 printUpstream :: (MonadIO m, Show a') => Producer a m r -> Proxy X () a' a m r
 printUpstream = go
@@ -27,10 +30,9 @@ main = do
     r <- PP.fold LBS.append LBS.empty id
              $ void (buildNodes 10 (fromIntegral n) src) >>~ const putBS
     print r
+    run $ for (walkNodes r) $ lift . (print :: BTree Int64 OnDisk Int64 -> IO ())
     return ()
 
 decodeNode :: LBS.ByteString -> BTree Int64 OnDisk Int64
 decodeNode = decode           
-    
--- buildNodes 10 100 src :: Proxy X () (OnDisk a) a
--- putBS                 :: Proxy (OnDisk a) a () ByteString
+
