@@ -5,19 +5,16 @@ module BTree.Lookup ( LookupTree
 
 import Prelude hiding (lookup)
 import Control.Error
+import Control.Lens
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import Data.Binary
 import System.IO.MMap
 import BTree.Types
 
-data LookupTree k e = LookupTree { ltData    :: !BS.ByteString
-                                 , ltHeader  :: !(BTreeHeader k e)
-                                 }
-     
 fetch :: (Binary a) => LookupTree k e -> OnDisk a -> a
 fetch lt (OnDisk offset) =
-    decode $ LBS.fromStrict $ BS.drop (fromIntegral offset) (ltData lt)
+    decode $ LBS.fromStrict $ BS.drop (fromIntegral offset) (lt^.ltData)
 
 open :: FilePath -> IO (Either String (LookupTree k e))
 open fname = runEitherT $ do
@@ -29,7 +26,7 @@ open fname = runEitherT $ do
    
 lookup :: (Binary k, Binary e, Ord k)
        => LookupTree k e -> k -> Maybe e
-lookup lt k = go $ fetch lt (btRoot $ ltHeader lt)
+lookup lt k = go $ fetch lt (lt ^. ltHeader . btRoot)
   where go (Leaf (BLeaf k' e))
           | k' == k     = Just e
           | otherwise   = Nothing

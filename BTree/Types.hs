@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveGeneric, FlexibleContexts, UndecidableInstances, StandaloneDeriving #-}
+{-# LANGUAGE DeriveGeneric, FlexibleContexts, TemplateHaskell, UndecidableInstances, StandaloneDeriving #-}
 
 module BTree.Types where
 
@@ -6,8 +6,10 @@ import Data.Binary
 import GHC.Generics
 import Control.Monad (when)
 import Control.Applicative
+import Control.Lens
 import Data.Word
 import Data.Int
+import qualified Data.ByteString as BS
 
 magic :: Word64
 magic = 0xdeadbeefbbbbcccc
@@ -21,22 +23,6 @@ type Size = Word64
 -- | The maximum number of children of a B-tree inner node
 type Order = Word64
 
--- | B-tree file header
-data BTreeHeader k e = BTreeHeader { btMagic   :: !Word64
-                                   , btVersion :: !Word64
-                                   , btOrder   :: !Order
-                                   , btSize    :: !Size
-                                   , btRoot    :: !(OnDisk (BTree k OnDisk e))
-                                   }
-                 deriving (Show, Eq, Generic)
-
-instance Binary (BTreeHeader k e)
-
-validateHeader :: BTreeHeader k e -> Either String ()
-validateHeader hdr = do
-    when (btMagic hdr /= magic) $ Left "Invalid magic number"
-    when (btVersion hdr > 1) $ Left "Invalid version"
-    
 -- | 'OnDisk a' is a reference to an object of type 'a' on disk
 newtype OnDisk a = OnDisk Offset
                  deriving (Show, Eq, Ord)
@@ -78,3 +64,25 @@ treeStartKey :: BTree k f e -> k
 treeStartKey (Node _ ((k,_):_)) = k
 treeStartKey (Node _ [])        = error "BTree.Types.treeStartKey: Empty node"
 treeStartKey (Leaf (BLeaf k _)) = k
+
+-- | B-tree file header
+data BTreeHeader k e = BTreeHeader { _btMagic   :: !Word64
+                                   , _btVersion :: !Word64
+                                   , _btOrder   :: !Order
+                                   , _btSize    :: !Size
+                                   , _btRoot    :: !(OnDisk (BTree k OnDisk e))
+                                   }
+                 deriving (Show, Eq, Generic)
+makeLenses ''BTreeHeader     
+
+instance Binary (BTreeHeader k e)
+
+validateHeader :: BTreeHeader k e -> Either String ()
+validateHeader hdr = do
+    when (hdr^.btMagic /= magic) $ Left "Invalid magic number"
+    when (hdr^.btVersion > 1) $ Left "Invalid version"
+    
+data LookupTree k e = LookupTree { _ltData    :: !BS.ByteString
+                                 , _ltHeader  :: !(BTreeHeader k e)
+                                 }
+makeLenses ''LookupTree
