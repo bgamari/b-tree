@@ -76,4 +76,5 @@ instance (Binary k, Binary (f (BTree k f e)), Binary e)
     
 treeStartKey :: BTree k f e -> k
 treeStartKey (Node _ ((k,_):_)) = k
+treeStartKey (Node _ [])        = error "BTree.Types.treeStartKey: Empty node"
 treeStartKey (Leaf (BLeaf k _)) = k
