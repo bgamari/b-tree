@@ -36,13 +36,13 @@ import BTree.Types
 -- | A Producer which accepts offsets for the yielded objects in return
 type DiskProducer a = Proxy X () (OnDisk a) a
 
-putBS :: (Binary a, Monad m) => Proxy (OnDisk a) a () BS.ByteString m r
+putBS :: (Binary a, Monad m) => Proxy (OnDisk a) a () LBS.ByteString m r
 putBS = evalStateT (forever go) 0
   where go = do a <- get >>= lift . request . OnDisk
-                F.forM_ (LBS.toChunks $ B.encode a) $ \c->do
-                    s <- get
-                    put $! s + fromIntegral (BS.length c)
-                    lift $ yield c
+                let bs = B.encode a
+                s <- get
+                put $! s + fromIntegral (LBS.length bs)
+                lift $ yield bs
 
 type Depth = Int
 
@@ -154,7 +154,7 @@ buildNodes order size =
 buildTree :: (Monad m, Binary e, Binary k)
           => Order -> Size
           -> Producer (BLeaf k e) m r
-          -> Producer BS.ByteString m (BTreeHeader k e)
+          -> Producer LBS.ByteString m (BTreeHeader k e)
 buildTree order size producer = do
     root <- dropUpstream $ buildNodes order size (dropUpstream producer) >>~ const putBS
     return $ BTreeHeader magic 1 order size root
@@ -175,7 +175,7 @@ fromOrdered :: (Binary e, Binary k)
 fromOrdered order size fname producer =
     withFile fname WriteMode $ \h->do
     LBS.hPut h $ B.encode invalidHeader
-    hdr <- run $ for (buildTree order size producer) $ lift . BS.hPut h
+    hdr <- run $ for (buildTree order size producer) $ lift . LBS.hPut h
     hSeek h AbsoluteSeek 0
     LBS.hPut h $ B.encode hdr
     return ()
