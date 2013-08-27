@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell, BangPatterns, GeneralizedNewtypeDeriving #-}
 
-module BTree.Merge (merge) where
+module BTree.Merge (mergeCombine) where
 
 import Control.Applicative
 import Data.Function (on)
@@ -40,5 +40,8 @@ combine eq append = await >>= go
             then go (a `append` a')
             else yield a >> go a'
     
-merge :: [Producer (BTree k OnDisk v) m r] -> Producer (BTree k OnDisk v) m r
-merge = undefined
+mergeCombine :: (Monad m, Functor m)
+             => (a -> a -> Ordering) -> (a -> a -> a)
+             -> [Producer a m ()] -> Producer a m ()
+mergeCombine compare append producers =
+    mergeStreams compare producers >-> void (combine (\a b->compare a b == EQ) append)
