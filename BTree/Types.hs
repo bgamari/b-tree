@@ -66,10 +66,11 @@ instance (Binary k, Binary (f (BTree k f e)), Binary e)
              case typ of
                0 -> Node <$> get <*> get
                1 -> bleaf <$> get <*> get
+               _ -> fail "BTree.Types/get: Unknown node type"
       where bleaf k v = Leaf (BLeaf k v)
     put (Node e0 es)         = putWord8 0 >> put e0 >> put es
     put (Leaf (BLeaf k0 e))  = putWord8 1 >> put k0 >> put e
-
+    
 treeStartKey :: BTree k f e -> k
 treeStartKey (Node _ ((k,_):_)) = k
 treeStartKey (Leaf (BLeaf k _)) = k
