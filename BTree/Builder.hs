@@ -36,13 +36,14 @@ import BTree.Types
 -- | A Producer which accepts offsets for the yielded objects in return
 type DiskProducer a = Proxy X () (OnDisk a) a
 
-putBS :: (Binary a, Monad m) => Proxy (OnDisk a) a () LBS.ByteString m r
-putBS = evalStateT (forever go) 0
-  where go = do s <- get
-                a <- lift $ request (OnDisk s)
-                let bs = B.encode a
-                put $! s + fromIntegral (LBS.length bs)
-                lift $ yield bs
+putBS :: (Binary a, Monad m) => a -> Proxy (OnDisk a) a () LBS.ByteString m r
+putBS a0 = evalStateT (go a0) 0
+  where go a = do s <- get
+                  let bs = B.encode a
+                  put $! s + fromIntegral (LBS.length bs)
+                  lift $ yield bs
+                  a <- lift $ request (OnDisk s)
+                  go a
 
 type Depth = Int
 
@@ -170,7 +171,7 @@ buildTree :: (Monad m, Binary e, Binary k)
           -> Producer (BLeaf k e) m r
           -> Producer LBS.ByteString m (BTreeHeader k e)
 buildTree order size producer =
-    dropUpstream $ buildNodes order size (dropUpstream producer) >>~ const putBS
+    dropUpstream $ buildNodes order size (dropUpstream producer) >>~ putBS
 
 dropUpstream :: Monad m => Proxy X () () b m r -> Proxy X () b' b m r
 dropUpstream = go
