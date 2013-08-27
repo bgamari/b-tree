@@ -16,4 +16,4 @@ main = do
 
     Right lt <- L.open "hello.btree"
              :: IO (Either String (LookupTree Int64 Int64))
-    print $ L.lookup lt 0x5
+    mapM_ (print . L.lookup lt) [0..n]
