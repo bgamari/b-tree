@@ -84,7 +84,7 @@ buildNodes :: Monad m
            -> DiskProducer (BLeaf k e) m r
            -> DiskProducer (BTree k OnDisk e) m (OnDisk (BTree k OnDisk e))
 buildNodes order size =
-    flip evalStateT (map initialState [0..maxDepth]) . loop size
+    flip evalStateT (map initialState [0..maxDepth-1]) . loop size
   where loop :: Monad m
              => Size -> DiskProducer (BLeaf k e) m r
              -> StateT [DepthState k e] (DiskProducer (BTree k OnDisk e) m)
@@ -149,11 +149,13 @@ buildNodes order size =
         flushAll = do
             s <- get
             case s of
-              [_,_] -> do -- This shouldn't be empty
+              [_]  -> do -- We are at the top node, this shouldn't be flushed yet
                          emitNode
               d:_  -> do when (not $ Seq.null $ d^.dNodes) $ void $ emitNode
                          zoom (singular _tail) flushAll
 
+-- | Produce a bytestring representing the nodes and leafs of the 
+-- B-tree and return a suitable header
 buildTree :: (Monad m, Binary e, Binary k)
           => Order -> Size
           -> Producer (BLeaf k e) m r
@@ -170,6 +172,7 @@ dropUpstream = go
             Left r               -> return r
             Right (a, producer') -> respond a >> go producer'
           
+-- | Build a B-tree into the given file
 fromOrdered :: (Binary e, Binary k)
             => Order -> Size
             -> FilePath
@@ -182,6 +185,4 @@ fromOrdered order size fname producer =
     hSeek h AbsoluteSeek 0
     LBS.hPut h $ B.encode hdr
     return ()
-
-invalidHeader :: BTreeHeader () ()
-invalidHeader = BTreeHeader 0 0 0 0 (OnDisk 0xdeadbeef)
+  where invalidHeader = BTreeHeader 0 0 0 0 (OnDisk 0)
