@@ -68,20 +68,16 @@ next' = go
 -- given size and order
 optimalFill :: Order -> Size -> [[Int]]
 optimalFill order size = go (fromIntegral size)
-  where go n =
-          let (nNodes,r) = properFraction $ realToFrac n / realToFrac order
-              order' = fromIntegral order
-              nodes = replicate nNodes order'
-                      ++ case numerator r of
-                           0   -> []
-                           n   -> [n * order' `div` denominator r]
-              nNodes' = nNodes
-                        + case numerator r of 
-                            0   -> 0
-                            _   -> 1
-              rest = case nNodes' of
+  where go :: Int -> [[Int]]
+        go n =
+          let nNodes = ceiling (n % order')
+              order' = fromIntegral order :: Int
+              nodes = let (nPerNode, rem) = n `divMod` nNodes
+                      in zipWith (+) (replicate nNodes nPerNode)
+                                     (replicate rem 1 ++ repeat 0)
+              rest = case nNodes of
                        1  -> []
-                       _  -> go nNodes'
+                       _  -> go nNodes
           in nodes : rest
 
 -- | Given a producer of a known number of leafs, produces an optimal B-tree.
