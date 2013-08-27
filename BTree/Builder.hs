@@ -38,9 +38,9 @@ type DiskProducer a = Proxy X () (OnDisk a) a
 
 putBS :: (Binary a, Monad m) => Proxy (OnDisk a) a () LBS.ByteString m r
 putBS = evalStateT (forever go) 0
-  where go = do a <- get >>= lift . request . OnDisk
+  where go = do s <- get
+                a <- lift $ request (OnDisk s)
                 let bs = B.encode a
-                s <- get
                 put $! s + fromIntegral (LBS.length bs)
                 lift $ yield bs
 
