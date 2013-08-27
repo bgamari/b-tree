@@ -10,8 +10,14 @@ import qualified Pipes.Prelude as PP
 import Data.Binary
 import Data.Binary.Get (runGetOrFail)
 
-walkLeaves :: Monad m => Pipe LBS.ByteString (k,v) m ()
-walkLeaves = undefined
+walkLeaves :: (Binary k, Binary v, Monad m)
+           => LBS.ByteString -> Producer (BLeaf k v) m (LBS.ByteString, Maybe String)
+walkLeaves b = walkNodes b >-> go
+  where go = do a <- await
+                case a of
+                  Leaf leaf  -> yield leaf
+                  _          -> return ()
+                go
 
 walkNodes :: (Binary k, Binary v, Monad m)
           => LBS.ByteString -> Producer (BTree k OnDisk v) m (LBS.ByteString, Maybe String)
