@@ -4,6 +4,7 @@ module BTree.Types where
 
 import Data.Binary
 import GHC.Generics
+import Control.Monad (when)
 import Control.Applicative
 import Data.Word
 import Data.Int
@@ -31,6 +32,11 @@ data BTreeHeader k e = BTreeHeader { btMagic   :: !Word64
 
 instance Binary (BTreeHeader k e)
 
+validateHeader :: BTreeHeader k e -> Either String ()
+validateHeader hdr = do
+    when (btMagic hdr /= magic) $ Left "Invalid magic number"
+    when (btVersion hdr > 1) $ Left "Invalid version"
+    
 -- | 'OnDisk a' is a reference to an object of type 'a' on disk
 newtype OnDisk a = OnDisk Offset
                  deriving (Show, Eq, Ord)
