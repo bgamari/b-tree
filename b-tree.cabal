@@ -1,0 +1,49 @@
+name:                b-tree
+version:             0.1.0.0
+synopsis:            Immutable disk-based B* trees
+-- description:         
+homepage:            http://github.com/bgamari/b-tree
+license:             BSD3
+license-file:        LICENSE
+author:              Ben Gamari
+maintainer:          bgamari.foss@gmail.com
+-- copyright:           
+category:            Data
+build-type:          Simple
+-- extra-source-files:  
+cabal-version:       >=1.10
+
+library
+  exposed-modules:     BTree
+  other-modules:       BTree.Types, BTree.Merge, BTree.Builder, BTree.Lookup, BTree.Walk
+  other-extensions:    DeriveGeneric, FlexibleContexts, TemplateHaskell, UndecidableInstances, StandaloneDeriving, BangPatterns, GeneralizedNewtypeDeriving
+  build-depends:       base >=4.6 && <4.7,
+                       mtl >=2.0 && <3.0,
+                       pipes >=4.0 && <4.1,
+                       bytestring >=0.10 && <0.11,
+                       binary >=0.7 && <0.8,
+                       transformers >=0.3 && <0.4,
+                       lens >=3.10 && <3.11,
+                       containers >=0.5 && <0.6,
+                       vector >=0.10 && <0.11,
+                       errors >=1.4 && <1.5,
+                       mmap >=0.5 && <0.6
+  default-language:    Haskell2010
+
+benchmark btree-benchmark
+  type:                exitcode-stdio-1.0
+  main-is:             Benchmark.hs
+  build-depends:       base >=4.6 && <4.7,
+                       mtl >=2.0 && <3.0,
+                       criterion >=0.9 && <0.10,
+                       pipes >=4.0 && <4.1,
+                       bytestring >=0.10 && <0.11,
+                       binary >=0.7 && <0.8,
+                       transformers >=0.3 && <0.4,
+                       lens >=3.10 && <3.11,
+                       containers >=0.5 && <0.6,
+                       vector >=0.10 && <0.11,
+                       errors >=1.4 && <1.5,
+                       mmap >=0.5 && <0.6
+  default-language:    Haskell2010
+
