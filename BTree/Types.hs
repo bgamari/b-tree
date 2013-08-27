@@ -53,6 +53,9 @@ deriving instance (Show k, Show e) => Show (BLeaf k e)
     
 -- | 'BTree k f e' is a B* tree of key type 'k' with elements of type 'e'.
 -- Subtree references are contained within a type 'f'
+--
+-- The Node constructor contains a left child, and a list of key/child pairs
+-- where each child's keys are greater than or equal to the given key.
 data BTree k f e = Node (f (BTree k f e)) [(k, f (BTree k f e))]
                  | Leaf (BLeaf k e)
                  deriving (Generic)
