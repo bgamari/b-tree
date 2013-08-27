@@ -15,7 +15,7 @@ data LookupTree k e = LookupTree { ltData    :: !BS.ByteString
                                  , ltHeader  :: !(BTreeHeader k e)
                                  }
      
-fetch :: Binary a => LookupTree k e -> OnDisk a -> a
+fetch :: (Binary a) => LookupTree k e -> OnDisk a -> a
 fetch lt (OnDisk offset) =
     decode $ LBS.fromStrict $ BS.drop (fromIntegral offset) (ltData lt)
 
@@ -24,8 +24,9 @@ open fname = runEitherT $ do
     d <- fmapLT show $ tryIO $ mmapFileByteString fname Nothing
     (rest, _, hdr) <- fmapLT (\(_,_,err)->err) $ EitherT $ return
                       $ decodeOrFail $ LBS.fromStrict d
+    EitherT $ return $ validateHeader hdr
     return $ LookupTree (LBS.toStrict rest) hdr
-    
+   
 lookup :: (Binary k, Binary e, Ord k)
        => LookupTree k e -> k -> Maybe e
 lookup lt k = go $ fetch lt (btRoot $ ltHeader lt)
@@ -34,6 +35,7 @@ lookup lt k = go $ fetch lt (btRoot $ ltHeader lt)
           | otherwise = Nothing
         go (Node c0 children@((k0,_):_))
           | k < k0    = go $ fetch lt c0
-          | otherwise = case dropWhile (\(k',_)->k' < k) children of
-                          []         -> Nothing
+          | otherwise = case dropWhile (\(k',_)->k < k') children of
+                          []  -> Nothing
                           (_,tree):_ -> go $ fetch lt tree
+        go _          = error "BTree.Lookup.lookup: Node with no children"
