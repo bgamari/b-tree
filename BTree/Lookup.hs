@@ -31,11 +31,11 @@ lookup :: (Binary k, Binary e, Ord k)
        => LookupTree k e -> k -> Maybe e
 lookup lt k = go $ fetch lt (btRoot $ ltHeader lt)
   where go (Leaf (BLeaf k' e))
-          | k' == k   = Just e
-          | otherwise = Nothing
+          | k' == k     = Just e
+          | otherwise   = Nothing
+        go (Node c0 []) = go $ fetch lt c0 -- is this case necessary?
         go (Node c0 children@((k0,_):_))
-          | k < k0    = go $ fetch lt c0
-          | otherwise = case dropWhile (\(k',_)->k < k') children of
-                          []  -> Nothing
-                          (_,tree):_ -> go $ fetch lt tree
-        go _          = error "BTree.Lookup.lookup: Node with no children"
+          | k < k0      = go $ fetch lt c0
+          | otherwise   = case takeWhile (\(k',_)->k' <= k) children of
+                            []  -> Nothing
+                            xs  -> go $ fetch lt $ snd $ last xs
