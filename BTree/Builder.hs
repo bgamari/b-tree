@@ -75,6 +75,10 @@ optimalFill order size depth =
         low = denominator r - numerator r
     in map fromIntegral $ cycle $ replicate high ((n+1) * order^depth) ++ replicate low (n * order^depth)
 
+-- | Given a producer of a known number of leafs, produces an optimal B-tree.
+-- Technically the size is only an upper bound: the producer may
+-- terminate before providing the given number of leafs although the resulting
+-- tree will break the minimal fill invariant.
 buildNodes :: Monad m
            => Order -> Size
            -> DiskProducer (BLeaf k e) m r
