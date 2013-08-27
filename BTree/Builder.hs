@@ -32,7 +32,7 @@ import qualified Pipes.Internal as PI
 import qualified Pipes.Prelude as PP
 
 import BTree.Types
-
+       
 -- | A Producer which accepts offsets for the yielded objects in return
 type DiskProducer a = Proxy X () (OnDisk a) a
 
@@ -104,9 +104,9 @@ buildNodes order size =
                 flushAll n
               Right (leaf, producer') | n == 0 -> do
                 flushAll n
-              Right (leaf, producer')  -> do
+              Right (leaf@(BLeaf k _), producer')  -> do
                 -- TODO: Is there a way to check this coercion with the type system?
-                OnDisk offset <- processNode $ Leaf leaf
+                OnDisk offset <- processNode k $ Leaf leaf
                 loop (n-1) $ producer' (OnDisk offset)
 
         isFilled :: Monad m
@@ -119,30 +119,31 @@ buildNodes order size =
         emitNode :: Monad m
                  => StateT [DepthState k e] (DiskProducer (BTree k OnDisk e) m) (OnDisk (BTree k OnDisk e))
         emitNode = do
-            (_,node0):nodes <- zoom (singular _head) $ do
+            (k0,node0):nodes <- zoom (singular _head) $ do
                 nodes <- uses dNodes F.toList
                 dNodes .= Seq.empty
                 dNodeCount .= 0
                 dMinFill %= tail
                 return nodes
-            s <- get
+            --when (null nodes) $ error "BTree.Builder.buildNodes: Internal invariant broken: unexpected empty node"
             let newNode = Node node0 nodes
+            s <- get
             case s of
               [x] -> lift $ respond newNode
               _   -> zoom (singular _tail) $
-                         processNode newNode
+                         processNode k0 newNode
 
         processNode :: Monad m
-                    => BTree k OnDisk e
+                    => k -> BTree k OnDisk e
                     -> StateT [DepthState k e]
                               (DiskProducer (BTree k OnDisk e) m)
                               (OnDisk (BTree k OnDisk e))
-        processNode tree = do
+        processNode startKey tree = do
             filled <- isFilled
             when filled $ void $ emitNode
             offset <- lift $ respond tree
             zoom _head $ do
-                dNodes %= (Seq.|> (treeStartKey tree, offset))
+                dNodes %= (Seq.|> (startKey, offset))
                 dNodeCount += 1
             return offset
 
