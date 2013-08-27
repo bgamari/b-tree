@@ -2,9 +2,18 @@ import BTree.Builder
 import BTree.Walk
 import BTree.Merge
 import BTree.Types
+import BTree.Lookup as L
 import Pipes
+import Data.ByteString.Lazy as BS
+import Data.Int
 
-things :: [BLeaf Int Int]
-things = [BLeaf i 5 | i <- [1..100]]
+n = 16
+things :: [BLeaf Int64 Int64]
+things = [BLeaf (i) (0x1000*i) | i <- [0..n-1]]
 
-main = fromOrdered 10 100 "hello.btree" (each things)
+main = do
+    fromOrdered 4 (fromIntegral n) "hello.btree" (each things)
+
+    Right lt <- L.open "hello.btree"
+             :: IO (Either String (LookupTree Int64 Int64))
+    print $ L.lookup lt 0x5
