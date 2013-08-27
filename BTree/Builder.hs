@@ -63,29 +63,40 @@ next' = go
         PI.M         m  -> m >>= go
         PI.Pure    r    -> return (Left r)
      
-simplify :: Integral a => Ratio a -> Ratio a
-simplify r = let n = gcd (numerator r) (denominator r)
-             in (numerator r `div` n) % (denominator r `div` n)
-
-optimalFill :: Order -> Size -> Depth -> [Int]
-optimalFill order size depth = 
-    let (n,r) = properFraction $ simplify
-                $ realToFrac size / realToFrac (order^(depth+1))
-        high = denominator r
-        low = denominator r - numerator r
-    in map fromIntegral $ cycle $ replicate high ((n+1) * order^depth) ++ replicate low (n * order^depth)
+-- | Compute the optimal node sizes for each stratum of a tree of
+-- given size and order
+optimalFill :: Order -> Size -> [[Int]]
+optimalFill order size = go (fromIntegral size)
+  where go n =
+          let (nNodes,r) = properFraction $ realToFrac n / realToFrac order
+              order' = fromIntegral order
+              nodes = replicate nNodes order'
+                      ++ case numerator r of
+                           0   -> []
+                           n   -> [n * order' `div` denominator r]
+              nNodes' = nNodes
+                        + case numerator r of 
+                            0   -> 0
+                            _   -> 1
+              rest = case nNodes' of
+                       1  -> []
+                       _  -> go nNodes'
+          in nodes : rest
 
 -- | Given a producer of a known number of leafs, produces an optimal B-tree.
 -- Technically the size is only an upper bound: the producer may
 -- terminate before providing the given number of leafs although the resulting
 -- tree will break the minimal fill invariant.
+--
+-- depth=0 denotes the bottom (leafs) of the tree.
 buildNodes :: Monad m
            => Order -> Size
            -> DiskProducer (BLeaf k e) m r
            -> DiskProducer (BTree k OnDisk e) m (BTreeHeader k e)
 buildNodes order size =
-    flip evalStateT (map initialState [0..maxDepth-1]) . loop size
-  where loop :: Monad m
+    flip evalStateT initialState . loop size
+  where initialState = map (DepthS Seq.empty 0) $ optimalFill order size
+        loop :: Monad m
              => Size -> DiskProducer (BLeaf k e) m r
              -> StateT [DepthState k e] (DiskProducer (BTree k OnDisk e) m)
                        (BTreeHeader k e)
@@ -100,10 +111,6 @@ buildNodes order size =
                 -- TODO: Is there a way to check this coercion with the type system?
                 OnDisk offset <- processNode $ Leaf leaf
                 loop (n-1) $ producer' (OnDisk offset)
-
-        initialState depth = DepthS Seq.empty 0 $ cycle $ optimalFill order size depth
-        minFill = (order + 1) `div` 2
-        maxDepth = ceiling $ log (realToFrac size) / log (realToFrac order)
 
         isFilled :: Monad m
                  => StateT [DepthState k e] m Bool
