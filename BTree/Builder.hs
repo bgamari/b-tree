@@ -132,7 +132,6 @@ buildNodes order size =
         processNode tree = do
             filled <- isFilled
             when filled $ void $ emitNode
-            use (singular _head . dMinFill . singular _head) >>= \n->when (n==0) $ error "uh oh"
             offset <- lift $ respond tree
             zoom _head $ do
                 dNodes %= (Seq.|> (treeStartKey tree, offset))
