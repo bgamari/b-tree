@@ -145,7 +145,7 @@ buildNodes order size =
         flushAll = do
             s <- get
             case s of
-              [d]  -> do -- This shouldn't be empty
+              [_,_] -> do -- This shouldn't be empty
                          emitNode
               d:_  -> do when (not $ Seq.null $ d^.dNodes) $ void $ emitNode
                          zoom (singular _tail) flushAll
