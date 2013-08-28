@@ -17,10 +17,6 @@ fetch :: (Binary a) => LookupTree k e -> OnDisk a -> a
 fetch lt (OnDisk offset) =
     decode $ LBS.fromStrict $ BS.drop (fromIntegral offset) (lt^.ltData)
 
-mapL :: (a -> a') -> Either a b -> Either a' b
-mapL f (Left a)  = Left (f a)
-mapL _ (Right a) = Right a
-
 -- | Read a B-tree from a ByteString produced by
 -- @BTree.Builder.fromOrderedToByteString@
 fromByteString :: LBS.ByteString -> Either String (LookupTree k e)
