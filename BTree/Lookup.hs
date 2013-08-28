@@ -6,7 +6,7 @@ module BTree.Lookup ( LookupTree
 
 import Prelude hiding (lookup)
 import Control.Error
-import Control.Lens
+import Control.Lens hiding (children)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import Data.Binary
