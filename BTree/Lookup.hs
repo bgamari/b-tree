@@ -1,5 +1,6 @@
 module BTree.Lookup ( LookupTree
                     , open
+                    , fromByteString
                     , lookup
                     ) where
 
@@ -16,13 +17,23 @@ fetch :: (Binary a) => LookupTree k e -> OnDisk a -> a
 fetch lt (OnDisk offset) =
     decode $ LBS.fromStrict $ BS.drop (fromIntegral offset) (lt^.ltData)
 
+mapL :: (a -> a') -> Either a b -> Either a' b
+mapL f (Left a)  = Left (f a)
+mapL _ (Right a) = Right a
+
+-- | Read a B-tree from a ByteString produced by
+-- @BTree.Builder.fromOrderedToByteString@
+fromByteString :: LBS.ByteString -> Either String (LookupTree k e)
+fromByteString bs = do
+    (rest, _, hdr) <- fmapL (\(_,_,err)->err) $ decodeOrFail bs
+    validateHeader hdr
+    return $ LookupTree (LBS.toStrict rest) hdr
+
+-- | Read a B-tree from a file produced by @BTree.Builder.fromOrderedToFile@
 open :: FilePath -> IO (Either String (LookupTree k e))
 open fname = runEitherT $ do
     d <- fmapLT show $ tryIO $ mmapFileByteString fname Nothing
-    (rest, _, hdr) <- fmapLT (\(_,_,err)->err) $ EitherT $ return
-                      $ decodeOrFail $ LBS.fromStrict d
-    EitherT $ return $ validateHeader hdr
-    return $ LookupTree (LBS.toStrict rest) hdr
+    EitherT $ return $ fromByteString (LBS.fromStrict d)
    
 lookup :: (Binary k, Binary e, Ord k)
        => LookupTree k e -> k -> Maybe e

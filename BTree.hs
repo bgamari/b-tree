@@ -8,6 +8,7 @@ module BTree ( -- * Basic types
                -- * Looking up in trees
              , LookupTree
              , open
+             , fromByteString
              , lookup
                -- * Merging trees
              , mergeTrees
