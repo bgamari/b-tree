@@ -2,14 +2,13 @@
 
 module BTree.Merge (mergeTrees) where
 
-import Prelude hiding (sum)
+import Prelude hiding (sum, compare)
 import Control.Applicative
 import Data.Function (on)
 import Data.List (sortBy)
 import Data.Either (rights)
 import Data.Foldable
 import Control.Monad.State hiding (forM_)
-import qualified Data.ByteString.Lazy as LBS
 import Data.Binary       
 import Control.Lens
 import Pipes
