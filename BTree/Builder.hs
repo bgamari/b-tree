@@ -147,6 +147,7 @@ buildNodes order size =
         flushAll realSize = do
             s <- get
             case s of
+              []   -> error "BTree.Builder.flushAll: We should never get here"
               [_]  -> do -- We are at the top node, this shouldn't be flushed yet
                          root <- emitNode
                          return $ BTreeHeader magic 1 order realSize root
