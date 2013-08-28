@@ -35,6 +35,7 @@ open fname = runEitherT $ do
     d <- fmapLT show $ tryIO $ mmapFileByteString fname Nothing
     EitherT $ return $ fromByteString (LBS.fromStrict d)
    
+-- | Lookup a key in a tree
 lookup :: (Binary k, Binary e, Ord k)
        => LookupTree k e -> k -> Maybe e
 lookup lt k = go $ fetch lt (lt ^. ltHeader . btRoot)
