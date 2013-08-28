@@ -1,0 +1,7 @@
+# b-tree - Disk-backed B* trees
+
+`b-tree` is a Haskell implementation of a disk-backed B* tree. The
+library uses streaming IO to write an immutable B-tree to disk from
+ordered keys. This tree can then be opened via mmap for lookups. The
+tree can also be iterated over as well as merged with other trees and
+leaf sources.
