@@ -42,7 +42,7 @@ deriving instance (Show k, Show e) => Show (BLeaf k e)
 -- The Node constructor contains a left child, and a list of key/child pairs
 -- where each child's keys are greater than or equal to the given key.
 data BTree k f e = Node (f (BTree k f e)) [(k, f (BTree k f e))]
-                 | Leaf (BLeaf k e)
+                 | Leaf !(BLeaf k e)
                  deriving (Generic)
      
 deriving instance (Show e, Show k, Show (f (BTree k f e))) => Show (BTree k f e)
