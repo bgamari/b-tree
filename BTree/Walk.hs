@@ -10,15 +10,22 @@ import qualified Pipes.Prelude as PP
 import Data.Binary
 import Data.Binary.Get (runGetOrFail)
 
+-- If we only look at leaves keys will increase monotonically as we
+-- progress through the file.
+
+filterLeaves :: Monad m => Pipe (BTree k OnDisk v) (BLeaf k v) m r
+filterLeaves = do
+    a <- await
+    case a of
+      Leaf leaf  -> yield leaf
+      _          -> return ()
+    filterLeaves
+
 walkLeaves :: (Binary k, Binary v, Monad m)
            => LBS.ByteString -> Producer (BLeaf k v) m (LBS.ByteString, Maybe String)
-walkLeaves b = walkNodes b >-> go
-  where go = do a <- await
-                case a of
-                  Leaf leaf  -> yield leaf
-                  _          -> return ()
-                go
+walkLeaves b = walkNodes b >-> filterLeaves
 
+-- | Iterate over the 
 walkNodes :: (Binary k, Binary v, Monad m)
           => LBS.ByteString -> Producer (BTree k OnDisk v) m (LBS.ByteString, Maybe String)
 walkNodes b = walkNodesWithOffset b >-> PP.map snd
