@@ -11,9 +11,6 @@ import Data.Word
 import Data.Int
 import qualified Data.ByteString as BS
 
-magic :: Word64
-magic = 0xdeadbeefbbbbcccc
-
 -- | An offset within the stream         
 type Offset = Int64
 
@@ -23,7 +20,9 @@ type Size = Word64
 -- | The maximum number of children of a B-tree inner node
 type Order = Word64
 
--- | 'OnDisk a' is a reference to an object of type 'a' on disk
+-- | 'OnDisk a' is a reference to an object of type 'a' on disk.
+-- The offset does not include the header; e.g. the first object after
+-- the header is located at offset 0.
 newtype OnDisk a = OnDisk Offset
                  deriving (Show, Eq, Ord)
                 
@@ -31,6 +30,7 @@ instance Binary (OnDisk a) where
     get = OnDisk <$> get
     put (OnDisk off) = put off
 
+-- | A tree leaf
 data BLeaf k e = BLeaf !k !e
                deriving (Generic)
                
@@ -65,6 +65,9 @@ treeStartKey (Node _ ((k,_):_)) = k
 treeStartKey (Node _ [])        = error "BTree.Types.treeStartKey: Empty node"
 treeStartKey (Leaf (BLeaf k _)) = k
 
+magic :: Word64
+magic = 0xdeadbeefbbbbcccc
+
 -- | B-tree file header
 data BTreeHeader k e = BTreeHeader { _btMagic   :: !Word64
                                    , _btVersion :: !Word64
@@ -82,6 +85,7 @@ validateHeader hdr = do
     when (hdr^.btMagic /= magic) $ Left "Invalid magic number"
     when (hdr^.btVersion > 1) $ Left "Invalid version"
     
+-- | A read-only B-tree for lookups
 data LookupTree k e = LookupTree { _ltData    :: !BS.ByteString
                                  , _ltHeader  :: !(BTreeHeader k e)
                                  }

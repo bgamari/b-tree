@@ -47,9 +47,12 @@ putBS a0 = evalStateT (go a0) 0
 
 type Depth = Int
 
-data DepthState k e = DepthS { _dNodes      :: !(Seq (k, OnDisk (BTree k OnDisk e)))
-                             , _dNodeCount  :: !Int
-                             , _dMinFill    :: [Int]
+data DepthState k e = DepthS { -- | nodes to be included in the active node
+                               _dNodes       :: !(Seq (k, OnDisk (BTree k OnDisk e)))
+                               -- | the length of @dNodes@
+                             , _dNodeCount   :: !Int
+                               -- | the desired number of elements to fill the active node
+                             , _dMinFill     :: [Int]
                              }
 makeLenses ''DepthState
 
