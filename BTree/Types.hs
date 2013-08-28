@@ -7,7 +7,6 @@ import GHC.Generics
 import Control.Monad (when)
 import Control.Applicative
 import Control.Lens
-import Data.Word
 import Data.Int
 import qualified Data.ByteString as BS
 
