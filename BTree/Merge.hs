@@ -59,7 +59,7 @@ mergeTrees :: (Binary k, Binary e)
            -> [LookupTree k e]       -- ^ trees to merge
            -> IO ()
 mergeTrees compare append destOrder destFile trees = do
-    let producers = map (\lt->void $ walkLeaves $ lt ^. ltData . to LBS.fromStrict) trees
+    let producers = map (void . walkLeaves) trees
         size = sum $ map (\hdr->hdr ^. ltHeader . btSize) trees
     fromOrderedToFile destOrder size destFile $
       mergeCombine (compare `on` key) doAppend producers
