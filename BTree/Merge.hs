@@ -34,7 +34,7 @@ mergeStreams compare producers = do
 
 combine :: (Monad m)
         => (a -> a -> Bool)    -- ^ equality test
-        -> (a -> a -> a)       -- ^ combine operation
+        -> (a -> a -> m a)     -- ^ combine operation
         -> Producer a m r -> Producer a m r
 combine eq append producer = lift (next producer) >>= either return (uncurry go)
   where go a producer' = do
@@ -42,11 +42,12 @@ combine eq append producer = lift (next producer) >>= either return (uncurry go)
           case n of
             Left r                 -> yield a >> return r
             Right (a', producer'')
-              | a `eq` a'          -> go (a `append` a') producer''
+              | a `eq` a'          -> do a'' <- lift $ append a a'
+                                         go a'' producer''
               | otherwise          -> yield a >> go a' producer''
     
 mergeCombine :: (Monad m, Functor m)
-             => (a -> a -> Ordering) -> (a -> a -> a)
+             => (a -> a -> Ordering) -> (a -> a -> m a)
              -> [Producer a m ()] -> Producer a m ()
 mergeCombine compare append producers =
     combine (\a b->compare a b == EQ) append
@@ -57,31 +58,31 @@ mergeCombine compare append producers =
 -- Each producer must be annotated with the number of leaves it is
 -- expected to produce. The size of the resulting tree will be at most
 -- the sum of these sizes.
-mergeLeaves :: (Binary k, Binary e)
+mergeLeaves :: (MonadIO m, Functor m, Binary k, Binary e)
             => (k -> k -> Ordering)          -- ^ ordering on keys
-            -> (e -> e -> e)                 -- ^ merge operation on elements
+            -> (e -> e -> m e)               -- ^ merge operation on elements
             -> Order                         -- ^ order of merged tree
             -> FilePath                      -- ^ name of output file
-            -> [(Size, Producer (BLeaf k e) IO ())]   -- ^ producers of leaves to merge
-            -> IO ()
+            -> [(Size, Producer (BLeaf k e) m ())]   -- ^ producers of leaves to merge
+            -> m ()
 mergeLeaves compare append destOrder destFile producers = do
     let size = sum $ map fst producers
     fromOrderedToFile destOrder size destFile $
       mergeCombine (compare `on` key) doAppend (map snd producers)
-  where doAppend (BLeaf k e) (BLeaf _ e') = BLeaf k $ append e e'
+  where doAppend (BLeaf k e) (BLeaf _ e') = BLeaf k <$> append e e'
         key (BLeaf k _) = k
 
 -- | Merge several 'LookupTrees'
 --
 -- This is a convenience function for merging several trees already on
 -- disk. For a more flexible interface, see 'mergeLeaves'.
-mergeTrees :: (Binary k, Binary e)
+mergeTrees :: (MonadIO m, Functor m, Binary k, Binary e)
            => (k -> k -> Ordering)   -- ^ ordering on keys
-           -> (e -> e -> e)          -- ^ merge operation on elements
+           -> (e -> e -> m e)        -- ^ merge operation on elements
            -> Order                  -- ^ order of merged tree
            -> FilePath               -- ^ name of output file
            -> [LookupTree k e]       -- ^ trees to merge
-           -> IO ()
+           -> m ()
 mergeTrees compare append destOrder destFile trees = do
     mergeLeaves compare append destOrder destFile
     $ map sizedProducerForTree trees
