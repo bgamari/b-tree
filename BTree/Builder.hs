@@ -62,6 +62,7 @@ next' = go
 optimalFill :: Order -> Size -> [[Int]]
 optimalFill order size = go (fromIntegral size)
   where go :: Int -> [[Int]]
+        go 0 = error "BTree.Builder.optimalFill: zero size"
         go n =
           let nNodes = ceiling (n % order')
               order' = fromIntegral order :: Int
