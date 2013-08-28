@@ -92,9 +92,9 @@ buildNodes order size =
         loop n producer = do
             _next <- lift $ lift $ next' producer
             case _next of
-              Left r  -> do
+              Left _  -> do
                 flushAll n
-              Right (leaf, producer') | n == 0 -> do
+              Right _ | n == 0 -> do
                 flushAll n
               Right (leaf@(BLeaf k _), producer')  -> do
                 -- TODO: Is there a way to check this coercion with the type system?
@@ -121,7 +121,7 @@ buildNodes order size =
             let newNode = Node node0 nodes
             s <- get
             case s of
-              [x] -> lift $ respond newNode
+              [_] -> lift $ respond newNode
               _   -> zoom (singular _tail) $
                          processNode k0 newNode
 
