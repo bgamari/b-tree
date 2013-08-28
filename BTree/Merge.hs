@@ -50,7 +50,11 @@ mergeCombine compare append producers =
     combine (\a b->compare a b == EQ) append
     $ mergeStreams compare producers 
 
--- | Merge trees' leaves
+-- | Merge trees' leaves taking leaves from a set of producers.
+-- 
+-- Each producer must be annotated with the number of leaves it is
+-- expected to produce. The size of the resulting tree will be at most
+-- the sum of these sizes.
 mergeLeaves :: (Binary k, Binary e)
             => (k -> k -> Ordering)          -- ^ ordering on keys
             -> (e -> e -> e)                 -- ^ merge operation on elements
@@ -74,5 +78,13 @@ mergeTrees :: (Binary k, Binary e)
            -> [LookupTree k e]       -- ^ trees to merge
            -> IO ()
 mergeTrees compare append destOrder destFile trees = do
-    let producers = map (\lt->(lt ^. ltHeader . btSize, void $ walkLeaves lt)) trees
-    mergeLeaves compare append destOrder destFile producers
+    mergeLeaves compare append destOrder destFile
+    $ map sizedProducerForTree trees
+
+-- | Get a sized producer suitable for @mergeLeaves@ from a @LookupTree@
+sizedProducerForTree :: (Monad m, Binary k, Binary e)
+                     => LookupTree k e   -- ^ a tree
+                     -> (Size, Producer (BLeaf k e) m ())
+                                         -- ^ a sized Producer suitable for passing 
+                                         -- to @mergeLeaves@
+sizedProducerForTree lt = (lt ^. ltHeader . btSize, void $ walkLeaves lt)
