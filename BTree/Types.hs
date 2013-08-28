@@ -59,11 +59,6 @@ instance (Binary k, Binary (f (BTree k f e)), Binary e)
     put (Node e0 es)         = putWord8 0 >> put e0 >> put es
     put (Leaf (BLeaf k0 e))  = putWord8 1 >> put k0 >> put e
     
-treeStartKey :: BTree k f e -> k
-treeStartKey (Node _ ((k,_):_)) = k
-treeStartKey (Node _ [])        = error "BTree.Types.treeStartKey: Empty node"
-treeStartKey (Leaf (BLeaf k _)) = k
-
 magic :: Word64
 magic = 0xdeadbeefbbbbcccc
 
