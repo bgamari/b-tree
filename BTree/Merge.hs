@@ -44,9 +44,14 @@ mergeCombine :: (Monad m, Functor m)
 mergeCombine compare append producers =
     mergeStreams compare producers >-> void (combine (\a b->compare a b == EQ) append)
 
+-- | Merge two trees
 mergeTrees :: (Binary k, Binary e)
-           => (k -> k -> Ordering) -> (e -> e -> e)
-           -> Order -> FilePath -> [LookupTree k e] -> IO ()
+           => (k -> k -> Ordering)   -- ^ ordering on keys
+           -> (e -> e -> e)          -- ^ merge operation on elements
+           -> Order                  -- ^ order of merged tree
+           -> FilePath               -- ^ name of output file
+           -> [LookupTree k e]       -- ^ trees to merge
+           -> IO ()
 mergeTrees compare append destOrder destFile trees = do
     let producers = map (\lt->void $ walkLeaves $ lt ^. ltData . to LBS.fromStrict) trees
         size = sum $ map (\hdr->hdr ^. ltHeader . btSize) trees

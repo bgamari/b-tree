@@ -9,6 +9,8 @@ module BTree ( -- * Basic types
              , LookupTree
              , open
              , lookup
+               -- * Merging trees
+             , mergeTrees
              ) where
 
 import Prelude hiding (lookup)
