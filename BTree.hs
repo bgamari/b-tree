@@ -3,7 +3,8 @@ module BTree ( -- * Basic types
              , Size
              , Order
                -- * Building trees
-             , fromOrdered
+             , fromOrderedToFile
+             , fromOrderedToByteString
                -- * Looking up in trees
              , LookupTree
              , open

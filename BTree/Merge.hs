@@ -50,7 +50,7 @@ mergeTrees :: (Binary k, Binary e)
 mergeTrees compare append destOrder destFile trees = do
     let producers = map (\lt->void $ walkLeaves $ lt ^. ltData . to LBS.fromStrict) trees
         size = sum $ map (\hdr->hdr ^. ltHeader . btSize) trees
-    fromOrdered destOrder size destFile $
+    fromOrderedToFile destOrder size destFile $
       mergeCombine (compare `on` key) doAppend producers
   where doAppend (BLeaf k e) (BLeaf _ e') = BLeaf k $ append e e'
         key (BLeaf k _) = k

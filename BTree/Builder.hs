@@ -2,7 +2,8 @@
 
 module BTree.Builder
     ( buildNodes, putBS
-    , fromOrdered
+    , fromOrderedToFile
+    , fromOrderedToByteString
     ) where
 
 import Control.Monad.Trans.State.Strict
@@ -172,12 +173,12 @@ dropUpstream = go
             Right (a, producer') -> respond a >> go producer'
           
 -- | Build a B-tree into the given file
-fromOrdered :: (Binary e, Binary k)
-            => Order -> Size
-            -> FilePath
-            -> Producer (BLeaf k e) IO r
-            -> IO ()
-fromOrdered order size fname producer =
+fromOrderedToFile :: (Binary e, Binary k)
+                  => Order -> Size
+                  -> FilePath
+                  -> Producer (BLeaf k e) IO r
+                  -> IO ()
+fromOrderedToFile order size fname producer =
     withFile fname WriteMode $ \h->do
     LBS.hPut h $ B.encode invalidHeader
     hdr <- run $ for (buildTree order size producer) $ lift . LBS.hPut h
@@ -185,3 +186,28 @@ fromOrdered order size fname producer =
     LBS.hPut h $ B.encode hdr
     return ()
   where invalidHeader = BTreeHeader 0 0 0 0 (OnDisk 0)
+
+-- | Build a B-tree into ByteString
+-- 
+-- This is primarily used for testing. In particular, note that
+-- this is a bad idea for large trees as the entire contents of the
+-- tree will need to be kept in memory until all leaves have been
+-- added so that the header can be prepended.
+fromOrderedToByteString :: (Monad m, Binary e, Binary k)
+                        => Order -> Size
+                        -> Producer (BLeaf k e) m r
+                        -> m LBS.ByteString
+fromOrderedToByteString order size producer = do
+    (bs, hdr) <- foldR LBS.append LBS.empty id $ buildTree order size producer
+    return $ B.encode hdr `LBS.append` bs
+
+-- | Like @Pipes.Prelude.fold@ but provides returns producer result
+-- in addition to accumulator
+foldR :: Monad m => (x -> a -> x) -> x -> (x -> b) -> Producer a m r -> m (b, r)
+foldR step begin done p0 = loop p0 begin
+  where
+    loop p x = case p of
+        PI.Request _  fu -> loop (fu ()) x
+        PI.Respond a  fu -> loop (fu ()) $! step x a
+        PI.M          m  -> m >>= \p' -> loop p' x
+        PI.Pure    r     -> return (done x, r)
