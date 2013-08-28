@@ -7,6 +7,7 @@ module BTree.Builder
     ) where
 
 import Control.Monad.Trans.State.Strict
+import Control.Monad.IO.Class
 import Control.Monad
 
 import Data.Foldable as F
@@ -174,17 +175,18 @@ dropUpstream = go
             Right (a, producer') -> respond a >> go producer'
           
 -- | Build a B-tree into the given file
-fromOrderedToFile :: (Binary e, Binary k)
+fromOrderedToFile :: (MonadIO m, Binary e, Binary k)
                   => Order -> Size
                   -> FilePath
-                  -> Producer (BLeaf k e) IO r
-                  -> IO ()
-fromOrderedToFile order size fname producer =
-    withFile fname WriteMode $ \h->do
-    LBS.hPut h $ B.encode invalidHeader
-    hdr <- run $ for (buildTree order size producer) $ lift . LBS.hPut h
-    hSeek h AbsoluteSeek 0
-    LBS.hPut h $ B.encode hdr
+                  -> Producer (BLeaf k e) m r
+                  -> m ()
+fromOrderedToFile order size fname producer = do
+    h <- liftIO $ openFile fname WriteMode
+    liftIO $ LBS.hPut h $ B.encode invalidHeader
+    hdr <- run $ for (buildTree order size producer) $ liftIO . LBS.hPut h
+    liftIO $ hSeek h AbsoluteSeek 0
+    liftIO $ LBS.hPut h $ B.encode hdr
+    liftIO $ hClose h
     return ()
   where invalidHeader = BTreeHeader 0 0 0 0 (OnDisk 0)
 
