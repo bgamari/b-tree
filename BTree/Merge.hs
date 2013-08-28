@@ -30,19 +30,25 @@ mergeStreams compare producers = do
                    x' <- lift $ next producer
                    go $ either (const xs') (:xs') x'
 
-combine :: Monad m => (a -> a -> Bool) -> (a -> a -> a) -> Pipe a a m r
-combine eq append = await >>= go
-  where go a = do
-          a' <- await
-          if a `eq` a'
-            then go (a `append` a')
-            else yield a >> go a'
+combine :: (Monad m)
+        => (a -> a -> Bool)    -- ^ equality test
+        -> (a -> a -> a)       -- ^ combine operation
+        -> Producer a m r -> Producer a m r
+combine eq append producer = lift (next producer) >>= either return (uncurry go)
+  where go a producer' = do
+          n <- lift $ next producer'
+          case n of
+            Left r                 -> yield a >> return r
+            Right (a', producer'')
+              | a `eq` a'          -> go (a `append` a') producer''
+              | otherwise          -> yield a >> go a' producer''
     
 mergeCombine :: (Monad m, Functor m)
              => (a -> a -> Ordering) -> (a -> a -> a)
              -> [Producer a m ()] -> Producer a m ()
 mergeCombine compare append producers =
-    mergeStreams compare producers >-> void (combine (\a b->compare a b == EQ) append)
+    combine (\a b->compare a b == EQ) append
+    $ mergeStreams compare producers 
 
 -- | Merge two trees
 mergeTrees :: (Binary k, Binary e)
