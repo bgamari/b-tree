@@ -7,51 +7,17 @@ module BTree.Merge ( mergeTrees
 
 import Prelude hiding (sum, compare)
 import Control.Applicative
-import Data.Function (on)
-import Data.List (sortBy)
-import Data.Either (rights)
 import Data.Foldable
+import Data.Function (on)
 import Control.Monad.State hiding (forM_)
 import Data.Binary       
 import Control.Lens
 import Pipes
+import Pipes.Interleave
 
 import BTree.Types
 import BTree.Builder
 import BTree.Walk
-
-mergeStreams :: (Monad m, Functor m)
-             => (a -> a -> Ordering) -> [Producer a m ()] -> Producer a m ()
-mergeStreams compare producers = do
-    xs <- lift $ rights <$> mapM Pipes.next producers
-    go xs
-  where --go :: (Monad m, Functor m) => [(a, Producer a m ())] -> Producer a m ()
-        go [] = return ()
-        go xs = do let (a,producer):xs' = sortBy (compare `on` fst) xs
-                   yield a
-                   x' <- lift $ next producer
-                   go $ either (const xs') (:xs') x'
-
-combine :: (Monad m)
-        => (a -> a -> Bool)    -- ^ equality test
-        -> (a -> a -> m a)     -- ^ combine operation
-        -> Producer a m r -> Producer a m r
-combine eq append producer = lift (next producer) >>= either return (uncurry go)
-  where go a producer' = do
-          n <- lift $ next producer'
-          case n of
-            Left r                 -> yield a >> return r
-            Right (a', producer'')
-              | a `eq` a'          -> do a'' <- lift $ append a a'
-                                         go a'' producer''
-              | otherwise          -> yield a >> go a' producer''
-    
-mergeCombine :: (Monad m, Functor m)
-             => (a -> a -> Ordering) -> (a -> a -> m a)
-             -> [Producer a m ()] -> Producer a m ()
-mergeCombine compare append producers =
-    combine (\a b->compare a b == EQ) append
-    $ mergeStreams compare producers 
 
 -- | Merge trees' leaves taking ordered leaves from a set of producers.
 -- 
@@ -68,7 +34,7 @@ mergeLeaves :: (MonadIO m, Functor m, Binary k, Binary e)
 mergeLeaves compare append destOrder destFile producers = do
     let size = sum $ map fst producers
     fromOrderedToFile destOrder size destFile $
-      mergeCombine (compare `on` key) doAppend (map snd producers)
+      merge (compare `on` key) doAppend (map snd producers)
   where doAppend (BLeaf k e) (BLeaf _ e') = BLeaf k <$> append e e'
         key (BLeaf k _) = k
 
