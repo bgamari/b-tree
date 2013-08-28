@@ -5,7 +5,6 @@ module BTree.Builder
     , fromOrdered
     ) where
 
-import Control.Monad.IO.Class
 import Control.Monad.Trans.State.Strict
 import Control.Monad
 
@@ -13,23 +12,17 @@ import Data.Foldable as F
 import qualified Data.Sequence as Seq
 import           Data.Sequence (Seq)
 
-import Data.Int
 import Data.Ratio
 import Control.Lens
 import System.IO
 
 import qualified Data.Binary as B
-import qualified Data.Binary.Put as Put
 import           Data.Binary (Binary)
-
 import qualified Data.ByteString.Lazy as LBS
-import qualified Data.ByteString as BS
-import           Data.ByteString.Lazy (ByteString)
 
 import Pipes
 import Pipes.Core
 import qualified Pipes.Internal as PI
-import qualified Pipes.Prelude as PP
 
 import BTree.Types
        
@@ -45,8 +38,6 @@ putBS a0 = evalStateT (go a0) 0
                   a <- lift $ request (OnDisk s)
                   go a
 
-type Depth = Int
-
 data DepthState k e = DepthS { -- | nodes to be included in the active node
                                _dNodes       :: !(Seq (k, OnDisk (BTree k OnDisk e)))
                                -- | the length of @dNodes@
@@ -55,8 +46,6 @@ data DepthState k e = DepthS { -- | nodes to be included in the active node
                              , _dMinFill     :: [Int]
                              }
 makeLenses ''DepthState
-
-data WithDepth a = WithDepth !Depth !a
 
 next' :: (Monad m) => Proxy X () a' a m r -> m (Either r (a, a' -> Proxy X () a' a m r))
 next' = go
