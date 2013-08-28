@@ -7,13 +7,8 @@ import Control.Applicative
 import Data.Function (on)
 import Data.List (sortBy)
 import Data.Either (rights)
-import Data.Maybe (fromMaybe)
 import Data.Foldable
 import Control.Monad.State hiding (forM_)
-import Control.Monad.Trans.Class
-import qualified Data.Map.Strict as M
-import qualified Data.IntMap.Strict as IM
-import qualified Data.Vector as V
 import qualified Data.ByteString.Lazy as LBS
 import Data.Binary       
 import Control.Lens
@@ -21,7 +16,6 @@ import Pipes
 
 import BTree.Types
 import BTree.Builder
-import BTree.Lookup
 import BTree.Walk
 
 mergeStreams :: (Monad m, Functor m)
