@@ -22,12 +22,14 @@ filterLeaves = do
       _          -> return ()
     filterLeaves
 
+-- | Iterate over the leaves of the given tree in order of key.
 walkLeaves :: (Binary k, Binary v, Monad m)
            => LookupTree k v
            -> Producer (BLeaf k v) m (LBS.ByteString, Maybe String)
 walkLeaves b = walkNodes b >-> filterLeaves
 
--- | Iterate over the 
+-- | Iterate over the nodes and leaves of the given tree. These aren't
+-- necessarily sorted.
 walkNodes :: (Binary k, Binary v, Monad m)
           => LookupTree k v
           -> Producer (BTree k OnDisk v) m (LBS.ByteString, Maybe String)
