@@ -94,9 +94,9 @@ buildNodes order size =
             _next <- lift $ lift $ next' producer
             case _next of
               Left _  -> do
-                flushAll n
+                flushAll (size - n)
               Right _ | n == 0 -> do
-                flushAll n
+                flushAll (size - n)
               Right (leaf@(BLeaf k _), producer')  -> do
                 -- TODO: Is there a way to check this coercion with the type system?
                 OnDisk offset <- processNode k $ Leaf leaf
