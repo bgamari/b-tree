@@ -50,7 +50,22 @@ mergeCombine compare append producers =
     combine (\a b->compare a b == EQ) append
     $ mergeStreams compare producers 
 
--- | Merge two trees
+-- | Merge trees' leaves
+mergeLeaves :: (Binary k, Binary e)
+            => (k -> k -> Ordering)          -- ^ ordering on keys
+            -> (e -> e -> e)                 -- ^ merge operation on elements
+            -> Order                         -- ^ order of merged tree
+            -> FilePath                      -- ^ name of output file
+            -> [(Size, Producer (BLeaf k e) IO ())]   -- ^ producers of leaves to merge
+            -> IO ()
+mergeLeaves compare append destOrder destFile producers = do
+    let size = sum $ map fst producers
+    fromOrderedToFile destOrder size destFile $
+      mergeCombine (compare `on` key) doAppend (map snd producers)
+  where doAppend (BLeaf k e) (BLeaf _ e') = BLeaf k $ append e e'
+        key (BLeaf k _) = k
+
+-- | Merge several trees
 mergeTrees :: (Binary k, Binary e)
            => (k -> k -> Ordering)   -- ^ ordering on keys
            -> (e -> e -> e)          -- ^ merge operation on elements
@@ -59,9 +74,5 @@ mergeTrees :: (Binary k, Binary e)
            -> [LookupTree k e]       -- ^ trees to merge
            -> IO ()
 mergeTrees compare append destOrder destFile trees = do
-    let producers = map (void . walkLeaves) trees
-        size = sum $ map (\hdr->hdr ^. ltHeader . btSize) trees
-    fromOrderedToFile destOrder size destFile $
-      mergeCombine (compare `on` key) doAppend producers
-  where doAppend (BLeaf k e) (BLeaf _ e') = BLeaf k $ append e e'
-        key (BLeaf k _) = k
+    let producers = map (\lt->(lt ^. ltHeader . btSize, void $ walkLeaves lt)) trees
+    mergeLeaves compare append destOrder destFile producers
