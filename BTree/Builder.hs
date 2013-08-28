@@ -35,8 +35,8 @@ putBS a0 = evalStateT (go a0) 0
                   let bs = B.encode a
                   put $! s + fromIntegral (LBS.length bs)
                   lift $ yield bs
-                  a <- lift $ request (OnDisk s)
-                  go a
+                  a' <- lift $ request (OnDisk s)
+                  go a'
 
 data DepthState k e = DepthS { -- | nodes to be included in the active node
                                _dNodes       :: !(Seq (k, OnDisk (BTree k OnDisk e)))
