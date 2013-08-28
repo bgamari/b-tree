@@ -9,6 +9,7 @@ import Pipes
 import qualified Pipes.Prelude as PP
 import Data.Binary
 import Data.Binary.Get (runGetOrFail)
+import Control.Lens
 
 -- If we only look at leaves keys will increase monotonically as we
 -- progress through the file.
@@ -22,18 +23,20 @@ filterLeaves = do
     filterLeaves
 
 walkLeaves :: (Binary k, Binary v, Monad m)
-           => LBS.ByteString -> Producer (BLeaf k v) m (LBS.ByteString, Maybe String)
+           => LookupTree k v
+           -> Producer (BLeaf k v) m (LBS.ByteString, Maybe String)
 walkLeaves b = walkNodes b >-> filterLeaves
 
 -- | Iterate over the 
 walkNodes :: (Binary k, Binary v, Monad m)
-          => LBS.ByteString -> Producer (BTree k OnDisk v) m (LBS.ByteString, Maybe String)
+          => LookupTree k v
+          -> Producer (BTree k OnDisk v) m (LBS.ByteString, Maybe String)
 walkNodes b = walkNodesWithOffset b >-> PP.map snd
 
 walkNodesWithOffset :: (Binary k, Binary v, Monad m)
-                    => LBS.ByteString
+                    => LookupTree k v
                     -> Producer (Offset, BTree k OnDisk v) m (LBS.ByteString, Maybe String)
-walkNodesWithOffset = go 0
+walkNodesWithOffset = go 0 . view (ltData . to LBS.fromStrict)
   where go offset bs =
             case runGetOrFail get bs of
               Left (rest,_,err)  -> return (rest, Just err)
