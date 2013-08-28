@@ -14,6 +14,8 @@ module BTree ( -- * Basic types
              , mergeTrees
              , mergeLeaves
              , sizedProducerForTree
+               -- * Iterating over leaves
+             , walkLeaves
              ) where
 
 import Prelude hiding (lookup)
@@ -21,3 +23,4 @@ import BTree.Types
 import BTree.Merge
 import BTree.Builder
 import BTree.Lookup
+import BTree.Walk
