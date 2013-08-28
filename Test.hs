@@ -19,7 +19,7 @@ main = do
     
     Right a <- open' "hello1.btree"
     Right b <- open' "hello2.btree"
-    mergeTrees compare (+) 4 "hello-merged.btree" [a,b]
+    mergeTrees compare (return . (+)) 4 "hello-merged.btree" [a,b]
     
     Right lt <- open' "hello-merged.btree"
     mapM_ (print . L.lookup lt) [0..n]
