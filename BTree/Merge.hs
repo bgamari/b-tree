@@ -1,6 +1,9 @@
 {-# LANGUAGE TemplateHaskell, BangPatterns, GeneralizedNewtypeDeriving #-}
 
-module BTree.Merge (mergeTrees) where
+module BTree.Merge ( mergeTrees
+                   , mergeLeaves
+                   , sizedProducerForTree
+                   ) where
 
 import Prelude hiding (sum, compare)
 import Control.Applicative
@@ -49,7 +52,7 @@ mergeCombine compare append producers =
     combine (\a b->compare a b == EQ) append
     $ mergeStreams compare producers 
 
--- | Merge trees' leaves taking leaves from a set of producers.
+-- | Merge trees' leaves taking ordered leaves from a set of producers.
 -- 
 -- Each producer must be annotated with the number of leaves it is
 -- expected to produce. The size of the resulting tree will be at most
@@ -68,7 +71,10 @@ mergeLeaves compare append destOrder destFile producers = do
   where doAppend (BLeaf k e) (BLeaf _ e') = BLeaf k $ append e e'
         key (BLeaf k _) = k
 
--- | Merge several trees
+-- | Merge several 'LookupTrees'
+--
+-- This is a convenience function for merging several trees already on
+-- disk. For a more flexible interface, see 'mergeLeaves'.
 mergeTrees :: (Binary k, Binary e)
            => (k -> k -> Ordering)   -- ^ ordering on keys
            -> (e -> e -> e)          -- ^ merge operation on elements
@@ -80,10 +86,10 @@ mergeTrees compare append destOrder destFile trees = do
     mergeLeaves compare append destOrder destFile
     $ map sizedProducerForTree trees
 
--- | Get a sized producer suitable for @mergeLeaves@ from a @LookupTree@
+-- | Get a sized producer suitable for 'mergeLeaves' from a 'LookupTree'
 sizedProducerForTree :: (Monad m, Binary k, Binary e)
                      => LookupTree k e   -- ^ a tree
                      -> (Size, Producer (BLeaf k e) m ())
                                          -- ^ a sized Producer suitable for passing 
-                                         -- to @mergeLeaves@
+                                         -- to 'mergeLeaves'
 sizedProducerForTree lt = (lt ^. ltHeader . btSize, void $ walkLeaves lt)
