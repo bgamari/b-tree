@@ -12,6 +12,8 @@ module BTree ( -- * Basic types
              , lookup
                -- * Merging trees
              , mergeTrees
+             , mergeLeaves
+             , sizedProducerForTree
              ) where
 
 import Prelude hiding (lookup)
