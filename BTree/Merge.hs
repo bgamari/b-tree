@@ -34,7 +34,7 @@ mergeLeaves :: (MonadIO m, Functor m, Binary k, Binary e)
 mergeLeaves compare append destOrder destFile producers = do
     let size = sum $ map fst producers
     fromOrderedToFile destOrder size destFile $
-      merge (compare `on` key) doAppend (map snd producers)
+      mergeM (compare `on` key) doAppend (map snd producers)
   where doAppend (BLeaf k e) (BLeaf _ e') = BLeaf k <$> append e e'
         key (BLeaf k _) = k
 
