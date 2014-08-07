@@ -17,15 +17,14 @@ fetch :: (Binary a) => LookupTree k e -> OnDisk a -> a
 fetch lt (OnDisk offset) =
     decode $ LBS.fromStrict $ BS.drop (fromIntegral offset) (lt^.ltData)
 
--- | Read a B-tree from a ByteString produced by
--- 'BTree.Builder.fromOrderedToByteString'
+-- | Read a B-tree from a ByteString produced by 'BTree.Builder'
 fromByteString :: LBS.ByteString -> Either String (LookupTree k e)
 fromByteString bs = do
     (rest, _, hdr) <- fmapL (\(_,_,e)->e) $ decodeOrFail bs
     validateHeader hdr
     return $ LookupTree (LBS.toStrict rest) hdr
 
--- | Read a B-tree from a file produced by 'BTree.Builder.fromOrderedToFile'
+-- | Read a B-tree from a file produced by 'BTree.Builder'
 open :: FilePath -> IO (Either String (LookupTree k e))
 open fname = runEitherT $ do
     d <- fmapLT show $ tryIO $ mmapFileByteString fname Nothing
