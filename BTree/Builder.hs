@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell #-}              
+{-# LANGUAGE TemplateHaskell #-}
 
 module BTree.Builder
     ( buildNodes, putBS
@@ -27,7 +27,7 @@ import Pipes.Core
 import qualified Pipes.Internal as PI
 
 import BTree.Types
-       
+
 -- | A Producer which accepts offsets for the yielded objects in return
 type DiskProducer a = Proxy X () (OnDisk a) a
 
@@ -57,7 +57,7 @@ next' = go
         PI.Respond a fu -> return (Right (a, fu))
         PI.M         m  -> m >>= go
         PI.Pure    r    -> return (Left r)
-     
+
 -- | Compute the optimal node sizes for each stratum of a tree of
 -- given size and order
 optimalFill :: Order -> Size -> [[Int]]
@@ -173,7 +173,7 @@ dropUpstream = go
           case n of
             Left r               -> return r
             Right (a, producer') -> respond a >> go producer'
-          
+
 -- | Build a B-tree into the given file.
 --
 -- As the name suggests, this requires that the @Producer@ emits
@@ -194,7 +194,7 @@ fromOrderedToFile order size fname producer = do
   where invalidHeader = BTreeHeader 0 0 0 0 (OnDisk 0)
 
 -- | Build a B-tree into ByteString
--- 
+--
 -- As the name suggests, this requires that the @Producer@ emits
 -- leaves in ascending key order.
 --
