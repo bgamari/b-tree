@@ -13,7 +13,7 @@ module BTree.BinaryList
 import Prelude hiding (length)
 import Control.Applicative
 import Control.Monad.Trans.Class
-import Control.Monad.Trans.Either
+import Control.Error
 import Data.Word
 import System.IO
 

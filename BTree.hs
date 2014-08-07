@@ -5,6 +5,7 @@ module BTree ( -- * Basic types
                -- * Building trees
              , fromOrderedToFile
              , fromOrderedToByteString
+             , fromUnorderedToFile
                -- * Looking up in trees
              , LookupTree
              , open
@@ -24,3 +25,4 @@ import BTree.Merge
 import BTree.Builder
 import BTree.Lookup
 import BTree.Walk
+import BTree.BuildUnordered
