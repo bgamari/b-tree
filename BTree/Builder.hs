@@ -78,9 +78,9 @@ optimalFill order size = go (fromIntegral size)
                    _  -> go nNodes
       in nodes : rest
 
--- | Given a producer of a known number of leafs, produces an optimal B-tree.
+-- | Given a producer of a known number of leaves, produces an optimal B-tree.
 -- Technically the size is only an upper bound: the producer may
--- terminate before providing the given number of leafs although the resulting
+-- terminate before providing the given number of leaves although the resulting
 -- tree will break the minimal fill invariant.
 buildNodes :: Monad m
            => Order -> Size
@@ -90,7 +90,7 @@ buildNodes order size =
     flip evalStateT initialState . loop size
   where
     initialState = map (DepthS Seq.empty 0) $ optimalFill order size
-    -- depth=0 denotes the bottom (leafs) of the tree.
+    -- depth=0 denotes the bottom (leaves) of the tree.
     loop :: Monad m
          => Size -> DiskProducer (BLeaf k e) m r
          -> StateT [DepthState k e] (DiskProducer (BTree k OnDisk e) m)
@@ -162,7 +162,7 @@ buildNodes order size =
             d:_  -> do when (not $ Seq.null $ d^.dNodes) $ void $ emitNode
                        zoom (singular _tail) $ flushAll realSize
 
--- | Produce a bytestring representing the nodes and leafs of the
+-- | Produce a bytestring representing the nodes and leaves of the
 -- B-tree and return a suitable header
 buildTree :: (Monad m, Binary e, Binary k)
           => Order -> Size
