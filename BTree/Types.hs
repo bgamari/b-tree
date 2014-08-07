@@ -32,10 +32,17 @@ instance Binary (OnDisk a) where
 -- | A tree leaf
 data BLeaf k e = BLeaf !k !e
                deriving (Generic)
-               
-deriving instance (Eq k, Eq e) => Eq (BLeaf k e)
+
 deriving instance (Show k, Show e) => Show (BLeaf k e)
-    
+
+-- | This only compares on the keys
+instance (Eq k) => Eq (BLeaf k e) where
+    BLeaf a _ == BLeaf b _ = a == b
+
+-- | This only compares on the keys
+instance Ord k => Ord (BLeaf k e) where
+    compare (BLeaf a _) (BLeaf b _) = compare a b
+
 -- | 'BTree k f e' is a B* tree of key type 'k' with elements of type 'e'.
 -- Subtree references are contained within a type 'f'
 --
