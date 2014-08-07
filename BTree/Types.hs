@@ -29,7 +29,7 @@ instance Binary (OnDisk a) where
     get = OnDisk <$> get
     put (OnDisk off) = put off
 
--- | A tree leaf
+-- | A tree leaf (e.g. key/value pair)
 data BLeaf k e = BLeaf !k !e
                deriving (Generic)
 
