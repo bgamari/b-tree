@@ -64,7 +64,7 @@ runGetT _get bs = do
 
 -- | Read and verify the header from the file, then pass it along with the
 -- file's handle to an action. The file handle sits at the beginning of the
--- written content.
+-- written content when passed to the action.
 readWithHeader :: (MonadIO m, B.Binary hdr)
                => FilePath
                -> (hdr -> Handle -> m a)
