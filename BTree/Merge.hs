@@ -5,7 +5,7 @@ module BTree.Merge ( mergeTrees
                    , sizedProducerForTree
                    ) where
 
-import Prelude hiding (sum, compare)
+import Prelude hiding (sum)
 import Control.Applicative
 import Data.Foldable
 import Data.Function (on)
@@ -24,14 +24,13 @@ import BTree.Walk
 -- Each producer must be annotated with the number of leaves it is
 -- expected to produce. The size of the resulting tree will be at most
 -- the sum of these sizes.
-mergeLeaves :: (MonadIO m, Functor m, Binary k, Binary e)
-            => (k -> k -> Ordering)          -- ^ ordering on keys
-            -> (e -> e -> m e)               -- ^ merge operation on elements
+mergeLeaves :: (MonadIO m, Functor m, Binary k, Binary e, Ord k)
+            => (e -> e -> m e)               -- ^ merge operation on elements
             -> Order                         -- ^ order of merged tree
             -> FilePath                      -- ^ name of output file
             -> [(Size, Producer (BLeaf k e) m ())]   -- ^ producers of leaves to merge
             -> m ()
-mergeLeaves compare append destOrder destFile producers = do
+mergeLeaves append destOrder destFile producers = do
     let size = sum $ map fst producers
     fromOrderedToFile destOrder size destFile $
       mergeM (compare `on` key) doAppend (map snd producers)
@@ -43,15 +42,14 @@ mergeLeaves compare append destOrder destFile producers = do
 --
 -- This is a convenience function for merging several trees already on
 -- disk. For a more flexible interface, see 'mergeLeaves'.
-mergeTrees :: (MonadIO m, Functor m, Binary k, Binary e)
-           => (k -> k -> Ordering)   -- ^ ordering on keys
-           -> (e -> e -> m e)        -- ^ merge operation on elements
+mergeTrees :: (MonadIO m, Functor m, Binary k, Binary e, Ord k)
+           => (e -> e -> m e)        -- ^ merge operation on elements
            -> Order                  -- ^ order of merged tree
            -> FilePath               -- ^ name of output file
            -> [LookupTree k e]       -- ^ trees to merge
            -> m ()
-mergeTrees compare append destOrder destFile trees = do
-    mergeLeaves compare append destOrder destFile
+mergeTrees append destOrder destFile trees = do
+    mergeLeaves append destOrder destFile
     $ map sizedProducerForTree trees
 
 -- | Get a sized 'Producer' suitable for 'mergeLeaves' from a 'LookupTree'
