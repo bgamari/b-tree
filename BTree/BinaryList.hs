@@ -6,8 +6,10 @@ module BTree.BinaryList
       -- * Construction
     , toBinaryList
       -- * Fetching contents
-    , length
     , stream
+      -- * Other queries
+    , length
+    , filePath
     ) where
 
 import Prelude hiding (length)
@@ -28,6 +30,10 @@ import BTree.BinaryFile
 -- | A file containing a finite list of binary encoded items
 newtype BinaryList a = BinList FilePath
                      deriving (Show)
+
+-- | Get the path to the @BinaryList@ file
+filePath :: BinaryList a -> FilePath
+filePath (BinList f) = f
 
 data Header = Header { hdrLength :: Word64 }
             deriving (Show)
