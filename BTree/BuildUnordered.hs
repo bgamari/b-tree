@@ -5,26 +5,23 @@
 module BTree.BuildUnordered
     ( fromUnorderedToFile ) where
 
-import Control.Applicative
 import Control.Monad.Trans.State
 import Control.Error
 import Data.Traversable (forM)
 
 import qualified Data.Binary as B
-import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Set as S
 import System.IO
-import System.FilePath
 
 import Pipes
 import Pipes.Interleave
 import qualified BTree.BinaryList as BL
 import BTree.Types
-import BTree.Merge
 import BTree.Builder
 
 -- | Maximum number of leaf lists to attempt to merge at once.
 -- This is bounded by the maximum file handle count.
+maxChunkMerge :: Int
 maxChunkMerge = 100
 
 tempFilePath :: FilePath -> String -> IO FilePath
@@ -32,7 +29,7 @@ tempFilePath dir template = do
     (fname, h) <- liftIO $ openTempFile dir template
     hClose h
     return fname
-    
+
 -- | Build a B-tree into the given file.
 --
 -- This does not assume that the leaves are produced in order. Instead,
@@ -47,30 +44,33 @@ fromUnorderedToFile :: forall m e k r.
                     -> FilePath                   -- ^ Output file
                     -> Producer (BLeaf k e) m r   -- ^ 'Producer' of elements
                     -> EitherT String m ()
-fromUnorderedToFile scratch maxChunk order fname prod = do
-    bList <- lift (execStateT (fillLists prod) []) >>= merge
+fromUnorderedToFile scratch maxChunk order dest producer = do
+    bList <- lift (execStateT (fillLists producer) []) >>= goMerge
     size <- BL.length bList
     stream <- BL.stream bList
-    lift $ fromOrderedToFile order size fname stream
+    lift $ fromOrderedToFile order size dest stream
   where
-    fillLists :: Producer (BLeaf k e) m r -> StateT [BL.BinaryList (BLeaf k e)] m ()
+    fillLists :: Producer (BLeaf k e) m r -> StateT [BL.BinaryList (BLeaf k e)] m r
     fillLists prod = do
       fname <- liftIO $ tempFilePath scratch "chunk.list"
       (leaves, rest) <- lift $ takeChunk maxChunk prod
       (bList, ()) <- lift $ BL.toBinaryList fname $ each leaves
       modify (bList:)
+      case rest of
+        Left r         -> return r
+        Right nextProd -> fillLists nextProd
 
-    merge :: [BL.BinaryList (BLeaf k e)] -> EitherT String m (BL.BinaryList (BLeaf k e))
-    merge [l] = return l
-    merge ls = do
+    goMerge :: [BL.BinaryList (BLeaf k e)] -> EitherT String m (BL.BinaryList (BLeaf k e))
+    goMerge [l] = return l
+    goMerge ls = do
       ls'' <- forM (splitChunks maxChunkMerge ls) $ \ls'->do
         fname <- liftIO $ tempFilePath scratch "merged.list"
         mergeLists fname ls'
-      merge ls''
+      goMerge ls''
 
 -- | Split the list into chunks of bounded size and run each through a function
 splitChunks :: Int -> [a] -> [[a]]
-splitChunks chunkSize xs = go xs
+splitChunks chunkSize = go
   where
     go [] = []
     go xs = let (prefix,suffix) = splitAt chunkSize xs
@@ -94,7 +94,7 @@ takeChunk :: forall m a r. (Monad m, Ord a)
           => Int
           -> Producer a m r
           -> m (S.Set a, Either r (Producer a m r))
-takeChunk n prod = go n S.empty prod
+takeChunk n = go n S.empty
   where
     go :: Int -> S.Set a -> Producer a m r -> m (S.Set a, Either r (Producer a m r))
     go 0 s prod = return (s, Right prod)

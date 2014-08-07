@@ -39,8 +39,8 @@ instance B.Binary Header where
 -- | Encode the items of the given producer
 toBinaryList :: forall m a r. (MonadIO m, B.Binary a)
              => FilePath -> Producer a m r -> m (BinaryList a, r)
-toBinaryList fname prod = do
-    writeWithHeader fname (go 0 prod)
+toBinaryList fname producer = do
+    writeWithHeader fname (go 0 producer)
   where
     go :: Int -> Producer a m r
        -> Producer LBS.ByteString m (Header, (BinaryList a, r))
@@ -75,11 +75,3 @@ stream bl = withHeader bl readContents
       case B.decodeOrFail bs of
         Left (_, _, err)  -> return $ Left err
         Right (bs', _, a) -> yield a >> go (n-1) bs'
-
-test :: IO ()
-test = do
-    (lst, ()) <- toBinaryList "hi.list" $ each [0..100000::Int]
-    res <- runEitherT $ stream lst
-    case res of
-      Left err -> print err
-      Right prod -> runEffect (for prod $ liftIO . print) >>= print

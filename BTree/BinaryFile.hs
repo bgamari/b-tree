@@ -26,6 +26,7 @@ data Epilogue = Epilogue { magic :: Word64
                          }
               deriving (Show)
 
+epiLength :: Integer
 epiLength = 16
 
 magicNumber :: Word64
@@ -33,7 +34,7 @@ magicNumber = 0xdeadbeef
 
 instance B.Binary Epilogue where
     get = Epilogue <$> B.getWord64le <*> B.getWord64le
-    put (Epilogue magic len) = B.putWord64le magic >> B.putWord64le len
+    put (Epilogue m l) = B.putWord64le m >> B.putWord64le l
 
 -- | Write the produced bytestrings to the file followed by the
 -- returned header
@@ -58,8 +59,8 @@ annotate ann = fmapLT ((ann++": ")++)
 runGetT :: Monad m => B.Get a -> LBS.ByteString -> EitherT String m a
 runGetT _get bs = do
     case B.runGetOrFail _get bs of
-      Left (_, _, err) -> left err
-      Right (_, _, a)  -> right a
+      Left (_, _, e)  -> left e
+      Right (_, _, a) -> right a
 
 -- | Read and verify the header from the file, then pass it along with the
 -- file's handle to an action. The file handle sits at the beginning of the
@@ -84,10 +85,3 @@ readWithHeader fname action = do
     -- pass control to action
     liftIO $ hSeek h AbsoluteSeek 0
     lift $ action hdr h
-
-test :: IO ()
-test = do
-    writeWithHeader "test" $ yield (LBS.pack [0..100]) >> return (5::Word32, ())
-    let go :: Word32 -> Handle -> IO ()
-        go n h = return ()
-    runEitherT (readWithHeader "test" go) >>= print
