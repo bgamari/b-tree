@@ -3,12 +3,18 @@
 
 module BTree.BinaryList
     ( BinaryList
+      -- * Construction
     , toBinaryList
+      -- * Fetching contents
+    , length
     , stream
     ) where
 
+import Prelude hiding (length)
+import Control.Applicative
 import Control.Monad.Trans.Class
 import Control.Monad.Trans.Either
+import Data.Word
 import System.IO
 
 import qualified Data.ByteString.Lazy as LBS
@@ -23,30 +29,47 @@ import BTree.BinaryFile
 newtype BinaryList a = BinList FilePath
                      deriving (Show)
 
+data Header = Header { hdrLength :: Word64 }
+            deriving (Show)
+
+instance B.Binary Header where
+    get = Header <$> B.getWord64le
+    put (Header l) = B.putWord64le l
+
 -- | Encode the items of the given producer
-toBinaryList :: forall m a. (MonadIO m, B.Binary a)
-             => FilePath -> Producer a m () -> m (BinaryList a)
+toBinaryList :: forall m a r. (MonadIO m, B.Binary a)
+             => FilePath -> Producer a m r -> m (BinaryList a, r)
 toBinaryList fname prod = do
     writeWithHeader fname (go 0 prod)
   where
-    go :: Int -> Producer a m r -> Producer LBS.ByteString m (Int, BinaryList a)
+    go :: Int -> Producer a m r
+       -> Producer LBS.ByteString m (Header, (BinaryList a, r))
     go !n prod = do
         result <- lift $ next prod
         case result of
-          Left r -> return (n, BinList fname)
+          Left r ->
+            let hdr = Header (fromIntegral n)
+            in return (hdr, (BinList fname, r))
           Right (a, prod') -> do
             yield (B.encode a)
             go (n+1) prod'
 
+withHeader :: MonadIO m
+           => BinaryList a -> (Header -> Handle -> m b) -> EitherT String m b
+withHeader (BinList fname) action = readWithHeader fname action
+
+length :: MonadIO m => BinaryList a -> EitherT String m Word64
+length bl = withHeader bl $ \hdr _ -> return $ hdrLength hdr
+
 -- | Stream the items out of a @BinaryList@
 stream :: forall m a. (B.Binary a, MonadIO m)
        => BinaryList a -> EitherT String m (Producer a m (Either String ()))
-stream (BinList fname) = readWithHeader fname readContents
+stream bl = withHeader bl readContents
   where
-    readContents :: Int -> Handle -> m (Producer a m (Either String ()))
-    readContents len h = return $ liftIO (LBS.hGetContents h) >>= go len
+    readContents :: Header -> Handle -> m (Producer a m (Either String ()))
+    readContents hdr h = return $ liftIO (LBS.hGetContents h) >>= go (hdrLength hdr)
 
-    go :: Int -> LBS.ByteString -> Producer a m (Either String ())
+    go :: Word64 -> LBS.ByteString -> Producer a m (Either String ())
     go 0  _  = return $ Right ()
     go !n bs =
       case B.decodeOrFail bs of
@@ -55,7 +78,7 @@ stream (BinList fname) = readWithHeader fname readContents
 
 test :: IO ()
 test = do
-    lst <- toBinaryList "hi.list" $ each [0..100000::Int]
+    (lst, ()) <- toBinaryList "hi.list" $ each [0..100000::Int]
     res <- runEitherT $ stream lst
     case res of
       Left err -> print err
