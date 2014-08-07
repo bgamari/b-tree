@@ -157,7 +157,7 @@ buildNodes order size =
               d:_  -> do when (not $ Seq.null $ d^.dNodes) $ void $ emitNode
                          zoom (singular _tail) $ flushAll realSize
 
--- | Produce a bytestring representing the nodes and leafs of the 
+-- | Produce a bytestring representing the nodes and leafs of the
 -- B-tree and return a suitable header
 buildTree :: (Monad m, Binary e, Binary k)
           => Order -> Size
@@ -179,9 +179,10 @@ dropUpstream = go
 -- As the name suggests, this requires that the @Producer@ emits
 -- leaves in ascending key order.
 fromOrderedToFile :: (MonadIO m, Binary e, Binary k)
-                  => Order -> Size
-                  -> FilePath
-                  -> Producer (BLeaf k e) m r
+                  => Order                     -- ^ Order of tree
+                  -> Size                      -- ^ Maximum tree size
+                  -> FilePath                  -- ^ Output file
+                  -> Producer (BLeaf k e) m r  -- ^ 'Producer' of elements
                   -> m ()
 fromOrderedToFile order size fname producer = do
     h <- liftIO $ openFile fname WriteMode
@@ -203,8 +204,9 @@ fromOrderedToFile order size fname producer = do
 -- tree will need to be kept in memory until all leaves have been
 -- added so that the header can be prepended.
 fromOrderedToByteString :: (Monad m, Binary e, Binary k)
-                        => Order -> Size
-                        -> Producer (BLeaf k e) m r
+                        => Order                     -- ^ Order of tree
+                        -> Size                      -- ^ Maximum tree size
+                        -> Producer (BLeaf k e) m r  -- ^ 'Producer' of elements
                         -> m LBS.ByteString
 fromOrderedToByteString order size producer = do
     (bs, hdr) <- foldR LBS.append LBS.empty id $ buildTree order size producer
