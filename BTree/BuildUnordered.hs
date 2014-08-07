@@ -12,6 +12,7 @@ import Data.Traversable (forM)
 import qualified Data.Binary as B
 import qualified Data.Set as S
 import System.IO
+import System.Directory (removeFile)
 
 import Pipes
 import Pipes.Interleave
@@ -49,6 +50,7 @@ fromUnorderedToFile scratch maxChunk order dest producer = do
     size <- BL.length bList
     stream <- BL.stream bList
     lift $ fromOrderedToFile order size dest stream
+    liftIO $ removeFile $ BL.filePath bList
   where
     fillLists :: Producer (BLeaf k e) m r -> StateT [BL.BinaryList (BLeaf k e)] m r
     fillLists prod = do
@@ -65,7 +67,9 @@ fromUnorderedToFile scratch maxChunk order dest producer = do
     goMerge ls = do
       ls'' <- forM (splitChunks maxChunkMerge ls) $ \ls'->do
         fname <- liftIO $ tempFilePath scratch "merged.list"
-        mergeLists fname ls'
+        list <- mergeLists fname ls'
+        liftIO $ mapM_ (removeFile . BL.filePath) ls'
+        return list
       goMerge ls''
 
 -- | Split the list into chunks of bounded size and run each through a function
