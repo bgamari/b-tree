@@ -194,7 +194,7 @@ fromOrderedToFile order size fname producer = do
     return ()
   where invalidHeader = BTreeHeader 0 0 0 0 (OnDisk 0)
 
--- | Build a B-tree into ByteString
+-- | Build a B-tree into @ByteString@
 --
 -- As the name suggests, this requires that the @Producer@ emits
 -- leaves in ascending key order.
