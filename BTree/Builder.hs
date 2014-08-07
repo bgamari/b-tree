@@ -67,9 +67,9 @@ optimalFill order size = go (fromIntegral size)
         go n =
           let nNodes = ceiling (n % order')
               order' = fromIntegral order :: Int
-              nodes = let (nPerNode, rem) = n `divMod` nNodes
+              nodes = let (nPerNode, leftover) = n `divMod` nNodes
                       in zipWith (+) (replicate nNodes nPerNode)
-                                     (replicate rem 1 ++ repeat 0)
+                                     (replicate leftover 1 ++ repeat 0)
               rest = case nNodes of
                        1  -> []
                        _  -> go nNodes
