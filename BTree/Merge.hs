@@ -53,10 +53,10 @@ mergeTrees compare append destOrder destFile trees = do
     mergeLeaves compare append destOrder destFile
     $ map sizedProducerForTree trees
 
--- | Get a sized producer suitable for 'mergeLeaves' from a 'LookupTree'
+-- | Get a sized 'Producer' suitable for 'mergeLeaves' from a 'LookupTree'
 sizedProducerForTree :: (Monad m, Binary k, Binary e)
                      => LookupTree k e   -- ^ a tree
                      -> (Size, Producer (BLeaf k e) m ())
-                                         -- ^ a sized Producer suitable for passing 
+                                         -- ^ a sized 'Producer' suitable for passing
                                          -- to 'mergeLeaves'
 sizedProducerForTree lt = (lt ^. ltHeader . btSize, void $ walkLeaves lt)
