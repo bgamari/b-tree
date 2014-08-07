@@ -43,6 +43,10 @@ instance (Eq k) => Eq (BLeaf k e) where
 instance Ord k => Ord (BLeaf k e) where
     compare (BLeaf a _) (BLeaf b _) = compare a b
 
+instance (Binary k, Binary e) => Binary (BLeaf k e) where
+    get = BLeaf <$> get <*> get
+    put (BLeaf k e) = put k >> put e
+
 -- | 'BTree k f e' is a B* tree of key type 'k' with elements of type 'e'.
 -- Subtree references are contained within a type 'f'
 --
