@@ -10,7 +10,7 @@ import Control.Lens
 import Data.Int
 import qualified Data.ByteString as BS
 
--- | An offset within the stream         
+-- | An offset within the stream
 type Offset = Int64
 
 -- | The number of entries in a B-tree
@@ -24,7 +24,7 @@ type Order = Word64
 -- the header is located at offset 0.
 newtype OnDisk a = OnDisk Offset
                  deriving (Show, Eq, Ord)
-                
+
 instance Binary (OnDisk a) where
     get = OnDisk <$> get
     put (OnDisk off) = put off
@@ -44,7 +44,7 @@ deriving instance (Show k, Show e) => Show (BLeaf k e)
 data BTree k f e = Node (f (BTree k f e)) [(k, f (BTree k f e))]
                  | Leaf !(BLeaf k e)
                  deriving (Generic)
-     
+
 deriving instance (Show e, Show k, Show (f (BTree k f e))) => Show (BTree k f e)
 deriving instance (Eq e, Eq k, Eq (f (BTree k f e))) => Eq (BTree k f e)
 
@@ -58,7 +58,7 @@ instance (Binary k, Binary (f (BTree k f e)), Binary e)
       where bleaf k v = Leaf (BLeaf k v)
     put (Node e0 es)         = putWord8 0 >> put e0 >> put es
     put (Leaf (BLeaf k0 e))  = putWord8 1 >> put k0 >> put e
-    
+
 magic :: Word64
 magic = 0xdeadbeefbbbbcccc
 
@@ -70,7 +70,7 @@ data BTreeHeader k e = BTreeHeader { _btMagic   :: !Word64
                                    , _btRoot    :: !(OnDisk (BTree k OnDisk e))
                                    }
                  deriving (Show, Eq, Generic)
-makeLenses ''BTreeHeader     
+makeLenses ''BTreeHeader
 
 instance Binary (BTreeHeader k e)
 
@@ -78,7 +78,7 @@ validateHeader :: BTreeHeader k e -> Either String ()
 validateHeader hdr = do
     when (hdr^.btMagic /= magic) $ Left "Invalid magic number"
     when (hdr^.btVersion > 1) $ Left "Invalid version"
-    
+
 -- | A read-only B-tree for lookups
 data LookupTree k e = LookupTree { _ltData    :: !BS.ByteString
                                  , _ltHeader  :: !(BTreeHeader k e)
