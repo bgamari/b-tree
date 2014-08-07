@@ -33,12 +33,14 @@ type DiskProducer a = Proxy X () (OnDisk a) a
 
 putBS :: (Binary a, Monad m) => a -> Proxy (OnDisk a) a () LBS.ByteString m r
 putBS a0 = evalStateT (go a0) 0
-  where go a = do s <- get
-                  let bs = B.encode a
-                  put $! s + fromIntegral (LBS.length bs)
-                  lift $ yield bs
-                  a' <- lift $ request (OnDisk s)
-                  go a'
+  where
+    go a = do
+      s <- get
+      let bs = B.encode a
+      put $! s + fromIntegral (LBS.length bs)
+      lift $ yield bs
+      a' <- lift $ request (OnDisk s)
+      go a'
 
 data DepthState k e = DepthS { -- | nodes to be included in the active node
                                _dNodes       :: !(Seq (k, OnDisk (BTree k OnDisk e)))
@@ -62,18 +64,19 @@ next' = go
 -- given size and order
 optimalFill :: Order -> Size -> [[Int]]
 optimalFill order size = go (fromIntegral size)
-  where go :: Int -> [[Int]]
-        go 0 = error "BTree.Builder.optimalFill: zero size"
-        go n =
-          let nNodes = ceiling (n % order')
-              order' = fromIntegral order :: Int
-              nodes = let (nPerNode, leftover) = n `divMod` nNodes
-                      in zipWith (+) (replicate nNodes nPerNode)
-                                     (replicate leftover 1 ++ repeat 0)
-              rest = case nNodes of
-                       1  -> []
-                       _  -> go nNodes
-          in nodes : rest
+  where
+    go :: Int -> [[Int]]
+    go 0 = error "BTree.Builder.optimalFill: zero size"
+    go n =
+      let nNodes = ceiling (n % order')
+          order' = fromIntegral order :: Int
+          nodes = let (nPerNode, leftover) = n `divMod` nNodes
+                  in zipWith (+) (replicate nNodes nPerNode)
+                                 (replicate leftover 1 ++ repeat 0)
+          rest = case nNodes of
+                   1  -> []
+                   _  -> go nNodes
+      in nodes : rest
 
 -- | Given a producer of a known number of leafs, produces an optimal B-tree.
 -- Technically the size is only an upper bound: the producer may
@@ -192,7 +195,8 @@ fromOrderedToFile order size fname producer = do
     liftIO $ LBS.hPut h $ B.encode hdr
     liftIO $ hClose h
     return ()
-  where invalidHeader = BTreeHeader 0 0 0 0 (OnDisk 0)
+  where
+    invalidHeader = BTreeHeader 0 0 0 0 (OnDisk 0)
 
 -- | Build a B-tree into @ByteString@
 --
