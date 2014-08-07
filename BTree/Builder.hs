@@ -183,7 +183,7 @@ fromOrderedToFile :: (MonadIO m, Binary e, Binary k)
 fromOrderedToFile order size fname producer = do
     h <- liftIO $ openFile fname WriteMode
     liftIO $ LBS.hPut h $ B.encode invalidHeader
-    hdr <- run $ for (buildTree order size producer) $ liftIO . LBS.hPut h
+    hdr <- runEffect $ for (buildTree order size producer) $ liftIO . LBS.hPut h
     liftIO $ hSeek h AbsoluteSeek 0
     liftIO $ LBS.hPut h $ B.encode hdr
     liftIO $ hClose h
