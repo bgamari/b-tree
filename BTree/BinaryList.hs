@@ -79,5 +79,5 @@ stream bl = withHeader bl readContents
     go 0  _  = return $ Right ()
     go !n bs =
       case B.decodeOrFail bs of
-        Left (_, _, err)  -> return $ Left err
+        Left (_, _, e)    -> return $ Left e
         Right (bs', _, a) -> yield a >> go (n-1) bs'
