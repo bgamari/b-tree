@@ -35,12 +35,12 @@ putBS :: (Binary a, Monad m) => a -> Proxy (OnDisk a) a () LBS.ByteString m r
 putBS a0 = evalStateT (go a0) 0
   where
     go a = do
-      s <- get
-      let bs = B.encode a
-      put $! s + fromIntegral (LBS.length bs)
-      lift $ yield bs
-      a' <- lift $ request (OnDisk s)
-      go a'
+        s <- get
+        let bs = B.encode a
+        put $! s + fromIntegral (LBS.length bs)
+        lift $ yield bs
+        a' <- lift $ request (OnDisk s)
+        go a'
 
 data DepthState k e = DepthS { -- | nodes to be included in the active node
                                _dNodes       :: !(Seq (k, OnDisk (BTree k OnDisk e)))
@@ -55,10 +55,10 @@ next' :: (Monad m) => Proxy X () a' a m r -> m (Either r (a, a' -> Proxy X () a'
 next' = go
   where
     go p = case p of
-        PI.Request _ fu -> go (fu ())
-        PI.Respond a fu -> return (Right (a, fu))
-        PI.M         m  -> m >>= go
-        PI.Pure    r    -> return (Left r)
+      PI.Request _ fu -> go (fu ())
+      PI.Respond a fu -> return (Right (a, fu))
+      PI.M         m  -> m >>= go
+      PI.Pure    r    -> return (Left r)
 
 -- | Compute the optimal node sizes for each stratum of a tree of
 -- given size and order
@@ -82,83 +82,85 @@ optimalFill order size = go (fromIntegral size)
 -- Technically the size is only an upper bound: the producer may
 -- terminate before providing the given number of leafs although the resulting
 -- tree will break the minimal fill invariant.
---
--- depth=0 denotes the bottom (leafs) of the tree.
 buildNodes :: Monad m
            => Order -> Size
            -> DiskProducer (BLeaf k e) m r
            -> DiskProducer (BTree k OnDisk e) m (BTreeHeader k e)
 buildNodes order size =
     flip evalStateT initialState . loop size
-  where initialState = map (DepthS Seq.empty 0) $ optimalFill order size
-        loop :: Monad m
-             => Size -> DiskProducer (BLeaf k e) m r
-             -> StateT [DepthState k e] (DiskProducer (BTree k OnDisk e) m)
-                       (BTreeHeader k e)
-        loop n producer = do
-            _next <- lift $ lift $ next' producer
-            case _next of
-              Left _  -> do
+  where
+    initialState = map (DepthS Seq.empty 0) $ optimalFill order size
+    -- depth=0 denotes the bottom (leafs) of the tree.
+    loop :: Monad m
+         => Size -> DiskProducer (BLeaf k e) m r
+         -> StateT [DepthState k e] (DiskProducer (BTree k OnDisk e) m)
+                   (BTreeHeader k e)
+    loop n producer = do
+        _next <- lift $ lift $ next' producer
+        case _next of
+            Left _  -> do
                 flushAll (size - n)
-              Right _ | n == 0 -> do
+            Right _ | n == 0 -> do
                 flushAll (size - n)
-              Right (leaf@(BLeaf k _), producer')  -> do
+            Right (leaf@(BLeaf k _), producer') -> do
                 -- TODO: Is there a way to check this coercion with the type system?
                 OnDisk offset <- processNode k $ Leaf leaf
                 loop (n-1) $ producer' (OnDisk offset)
 
-        isFilled :: Monad m
-                 => StateT [DepthState k e] m Bool
-        isFilled = zoom (singular _head) $ do
-            nodeCount <- use dNodeCount
-            minFill:_ <- use dMinFill
-            return $ nodeCount >= minFill
+    isFilled :: Monad m
+             => StateT [DepthState k e] m Bool
+    isFilled = zoom (singular _head) $ do
+        nodeCount <- use dNodeCount
+        minFill:_ <- use dMinFill
+        return $ nodeCount >= minFill
 
-        emitNode :: Monad m
-                 => StateT [DepthState k e] (DiskProducer (BTree k OnDisk e) m) (OnDisk (BTree k OnDisk e))
-        emitNode = do
-            (k0,node0):nodes <- zoom (singular _head) $ do
-                nodes <- uses dNodes F.toList
-                dNodes .= Seq.empty
-                dNodeCount .= 0
-                dMinFill %= tail
-                return nodes
-            --when (null nodes) $ error "BTree.Builder.buildNodes: Internal invariant broken: unexpected empty node"
-            let newNode = Node node0 nodes
-            s <- get
-            case s of
-              [_] -> lift $ respond newNode
-              _   -> zoom (singular _tail) $
-                         processNode k0 newNode
+    emitNode :: Monad m
+             => StateT [DepthState k e] (DiskProducer (BTree k OnDisk e) m)
+                       (OnDisk (BTree k OnDisk e))
+    emitNode = do
+        (k0,node0):nodes <- zoom (singular _head) $ do
+            nodes <- uses dNodes F.toList
+            dNodes .= Seq.empty
+            dNodeCount .= 0
+            dMinFill %= tail
+            return nodes
 
-        processNode :: Monad m
-                    => k -> BTree k OnDisk e
-                    -> StateT [DepthState k e]
-                              (DiskProducer (BTree k OnDisk e) m)
-                              (OnDisk (BTree k OnDisk e))
-        processNode startKey tree = do
-            filled <- isFilled
-            when filled $ void $ emitNode
-            offset <- lift $ respond tree
-            zoom _head $ do
-                dNodes %= (Seq.|> (startKey, offset))
-                dNodeCount += 1
-            return offset
+        --when (null nodes)
+        --  $ error "BTree.Builder.buildNodes: Internal invariant broken: unexpected empty node"
+        let newNode = Node node0 nodes
+        s <- get
+        case s of
+            [_] -> lift $ respond newNode
+            _   -> zoom (singular _tail) $ processNode k0 newNode
 
-        flushAll :: Monad m
-                 => Size
-                 -> StateT [DepthState k e]
-                           (DiskProducer (BTree k OnDisk e) m)
-                           (BTreeHeader k e)
-        flushAll realSize = do
-            s <- get
-            case s of
-              []   -> error "BTree.Builder.flushAll: We should never get here"
-              [_]  -> do -- We are at the top node, this shouldn't be flushed yet
-                         root <- emitNode
-                         return $ BTreeHeader magic 1 order realSize root
-              d:_  -> do when (not $ Seq.null $ d^.dNodes) $ void $ emitNode
-                         zoom (singular _tail) $ flushAll realSize
+    processNode :: Monad m
+                => k -> BTree k OnDisk e
+                -> StateT [DepthState k e]
+                          (DiskProducer (BTree k OnDisk e) m)
+                          (OnDisk (BTree k OnDisk e))
+    processNode startKey tree = do
+        filled <- isFilled
+        when filled $ void $ emitNode
+        offset <- lift $ respond tree
+        zoom _head $ do
+            dNodes %= (Seq.|> (startKey, offset))
+            dNodeCount += 1
+        return offset
+
+    flushAll :: Monad m
+             => Size
+             -> StateT [DepthState k e]
+                       (DiskProducer (BTree k OnDisk e) m)
+                       (BTreeHeader k e)
+    flushAll realSize = do
+        s <- get
+        case s of
+            []   -> error "BTree.Builder.flushAll: We should never get here"
+            [_]  -> do -- We are at the top node, this shouldn't be flushed yet
+                       root <- emitNode
+                       return $ BTreeHeader magic 1 order realSize root
+            d:_  -> do when (not $ Seq.null $ d^.dNodes) $ void $ emitNode
+                       zoom (singular _tail) $ flushAll realSize
 
 -- | Produce a bytestring representing the nodes and leafs of the
 -- B-tree and return a suitable header
@@ -171,9 +173,10 @@ buildTree order size producer =
 
 dropUpstream :: Monad m => Proxy X () () b m r -> Proxy X () b' b m r
 dropUpstream = go
-  where go producer = do
-          n <- lift $ next producer
-          case n of
+  where
+    go producer = do
+        n <- lift $ next producer
+        case n of
             Left r               -> return r
             Right (a, producer') -> respond a >> go producer'
 
