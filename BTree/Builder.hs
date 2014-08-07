@@ -174,7 +174,10 @@ dropUpstream = go
             Left r               -> return r
             Right (a, producer') -> respond a >> go producer'
           
--- | Build a B-tree into the given file
+-- | Build a B-tree into the given file.
+--
+-- As the name suggests, this requires that the @Producer@ emits
+-- leaves in ascending key order.
 fromOrderedToFile :: (MonadIO m, Binary e, Binary k)
                   => Order -> Size
                   -> FilePath
@@ -192,6 +195,9 @@ fromOrderedToFile order size fname producer = do
 
 -- | Build a B-tree into ByteString
 -- 
+-- As the name suggests, this requires that the @Producer@ emits
+-- leaves in ascending key order.
+--
 -- This is primarily used for testing. In particular, note that
 -- this is a bad idea for large trees as the entire contents of the
 -- tree will need to be kept in memory until all leaves have been
