@@ -10,7 +10,7 @@ import Control.Applicative
 import Data.Foldable
 import Data.Function (on)
 import Control.Monad.State hiding (forM_)
-import Data.Binary       
+import Data.Binary
 import Control.Lens
 import Pipes
 import Pipes.Interleave
@@ -20,7 +20,7 @@ import BTree.Builder
 import BTree.Walk
 
 -- | Merge trees' leaves taking ordered leaves from a set of producers.
--- 
+--
 -- Each producer must be annotated with the number of leaves it is
 -- expected to produce. The size of the resulting tree will be at most
 -- the sum of these sizes.
@@ -35,8 +35,9 @@ mergeLeaves compare append destOrder destFile producers = do
     let size = sum $ map fst producers
     fromOrderedToFile destOrder size destFile $
       mergeM (compare `on` key) doAppend (map snd producers)
-  where doAppend (BLeaf k e) (BLeaf _ e') = BLeaf k <$> append e e'
-        key (BLeaf k _) = k
+  where
+    doAppend (BLeaf k e) (BLeaf _ e') = BLeaf k <$> append e e'
+    key (BLeaf k _) = k
 
 -- | Merge several 'LookupTrees'
 --
