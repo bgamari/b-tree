@@ -56,7 +56,7 @@ fromUnorderedToFile scratch maxChunk order dest producer = do
     fillLists prod = do
       fname <- liftIO $ tempFilePath scratch "chunk.list"
       (leaves, rest) <- lift $ takeChunk maxChunk prod
-      (bList, ()) <- lift $ BL.toBinaryList fname $ each leaves
+      (bList, ()) <- lift $ BL.toBinaryList fname $ each $ S.toAscList leaves
       modify (bList:)
       case rest of
         Left r         -> return r
