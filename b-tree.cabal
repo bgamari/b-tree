@@ -1,5 +1,5 @@
 name:                b-tree
-version:             0.1.0.0
+version:             0.1.1
 synopsis:            Immutable disk-based B* trees
 description:         Immutable disk-based B* trees
 homepage:            http://github.com/bgamari/b-tree
