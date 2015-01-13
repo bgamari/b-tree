@@ -53,6 +53,17 @@ library
   default-language:    Haskell2010
   ghc-options:         -Wall
 
+test-suite btree-quickcheck
+  type:                exitcode-stdio-1.0
+  main-is:             QuickCheck.hs
+  hs-source-dirs:      tests
+  build-depends:       base >=4.6 && <4.8,
+                       containers,
+                       pipes,
+                       binary,
+                       b-tree,
+                       QuickCheck
+
 benchmark btree-benchmark
   type:                exitcode-stdio-1.0
   main-is:             Benchmark.hs
