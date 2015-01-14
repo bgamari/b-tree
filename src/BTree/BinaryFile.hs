@@ -52,6 +52,7 @@ writeWithHeader fname prod = do
     liftIO $ LBS.hPut h (B.encode epi)
     liftIO $ hClose h
     return r
+{-# INLINE writeWithHeader #-}
 
 annotate :: Monad m => String -> EitherT String m a -> EitherT String m a
 annotate ann = fmapLT ((ann++": ")++)

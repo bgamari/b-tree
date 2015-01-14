@@ -71,6 +71,7 @@ fromUnorderedToFile scratch maxChunk order dest producer = do
         liftIO $ mapM_ (removeFile . BL.filePath) ls'
         return list
       goMerge ls''
+{-# INLINE fromUnorderedToFile #-}
 
 -- | Split the list into chunks of bounded size and run each through a function
 splitChunks :: Int -> [a] -> [[a]]
@@ -79,6 +80,7 @@ splitChunks chunkSize = go
     go [] = []
     go xs = let (prefix,suffix) = splitAt chunkSize xs
             in prefix : go suffix
+{-# INLINE splitChunks #-}
 
 throwLeft :: Monad m => m (Either String r) -> m r
 throwLeft action = action >>= either error return
@@ -90,6 +92,7 @@ mergeLists dest lists = do
     let prod = interleave compare (map throwLeft streams)
     (bList, ()) <- lift $ BL.toBinaryList dest prod
     return bList
+{-# INLINE mergeLists #-}
 
 -- | Take the first 'n' elements and collect them in a 'Set'. Return
 -- a 'Producer' which will emit the remaining elements (or the return
@@ -107,3 +110,4 @@ takeChunk n = go n S.empty
       case result of
         Left r -> return (s, Left r)
         Right (a, prod') -> go (i-1) (S.insert a s) prod'
+{-# INLINE takeChunk #-}

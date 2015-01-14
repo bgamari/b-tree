@@ -41,6 +41,7 @@ putBS a0 = evalStateT (go a0) 0
         lift $ yield bs
         a' <- lift $ request (OnDisk s)
         go a'
+{-# INLINE putBS #-}
 
 data DepthState k e = DepthS { -- | nodes to be included in the active node
                                _dNodes       :: !(Seq (k, OnDisk (BTree k OnDisk e)))
@@ -59,6 +60,7 @@ next' = go
       PI.Respond a fu -> return (Right (a, fu))
       PI.M         m  -> m >>= go
       PI.Pure    r    -> return (Left r)
+{-# INLINE next' #-}
 
 -- | Compute the optimal node sizes for each stratum of a tree of
 -- given size and order
@@ -161,6 +163,7 @@ buildNodes order size =
                        return $ BTreeHeader magic 1 order realSize root
             d:_  -> do when (not $ Seq.null $ d^.dNodes) $ void $ emitNode
                        zoom (singular _tail) $ flushAll realSize
+{-# INLINE buildNodes #-}
 
 -- | Produce a bytestring representing the nodes and leaves of the
 -- B-tree and return a suitable header
@@ -170,6 +173,7 @@ buildTree :: (Monad m, Binary e, Binary k)
           -> Producer LBS.ByteString m (BTreeHeader k e)
 buildTree order size producer =
     dropUpstream $ buildNodes order size (dropUpstream producer) >>~ putBS
+{-# INLINE buildTree #-}
 
 dropUpstream :: Monad m => Proxy X () () b m r -> Proxy X () b' b m r
 dropUpstream = go
@@ -179,6 +183,7 @@ dropUpstream = go
         case n of
             Left r               -> return r
             Right (a, producer') -> respond a >> go producer'
+{-# INLINE dropUpstream #-}
 
 -- | Build a B-tree into the given file.
 --
@@ -200,6 +205,7 @@ fromOrderedToFile order size fname producer = do
     return ()
   where
     invalidHeader = BTreeHeader 0 0 0 0 (OnDisk 0)
+{-# INLINE fromOrderedToFile #-}
 
 -- | Build a B-tree into @ByteString@
 --

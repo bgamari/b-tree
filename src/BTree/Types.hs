@@ -27,7 +27,9 @@ newtype OnDisk a = OnDisk Offset
 
 instance Binary (OnDisk a) where
     get = OnDisk <$> get
+    {-# INLINE get #-}
     put (OnDisk off) = put off
+    {-# INLINE put #-}
 
 -- | A tree leaf (e.g. key/value pair)
 data BLeaf k e = BLeaf !k !e
@@ -42,10 +44,13 @@ instance (Eq k) => Eq (BLeaf k e) where
 -- | This only compares on the keys
 instance Ord k => Ord (BLeaf k e) where
     compare (BLeaf a _) (BLeaf b _) = compare a b
+    {-# INLINE compare #-}
 
 instance (Binary k, Binary e) => Binary (BLeaf k e) where
     get = BLeaf <$> get <*> get
+    {-# INLINE get #-}
     put (BLeaf k e) = put k >> put e
+    {-# INLINE put #-}
 
 -- | 'BTree k f e' is a B* tree of key type 'k' with elements of type 'e'.
 -- Subtree references are contained within a type 'f'
@@ -67,8 +72,11 @@ instance (Binary k, Binary (f (BTree k f e)), Binary e)
                1 -> bleaf <$> get <*> get
                _ -> fail "BTree.Types/get: Unknown node type"
       where bleaf k v = Leaf (BLeaf k v)
+    {-# INLINE get #-}
+
     put (Node e0 es)         = putWord8 0 >> put e0 >> put es
     put (Leaf (BLeaf k0 e))  = putWord8 1 >> put k0 >> put e
+    {-# INLINE put #-}
 
 magic :: Word64
 magic = 0xdeadbeefbbbbcccc

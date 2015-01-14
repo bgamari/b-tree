@@ -59,6 +59,7 @@ toBinaryList fname producer = do
           Right (a, prod') -> do
             yield (B.encode a)
             go (n+1) prod'
+{-# INLINE toBinaryList #-}
 
 withHeader :: MonadIO m
            => BinaryList a -> (Header -> Handle -> m b) -> EitherT String m b
