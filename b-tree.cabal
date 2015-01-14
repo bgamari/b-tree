@@ -67,18 +67,10 @@ test-suite btree-quickcheck
 benchmark btree-benchmark
   type:                exitcode-stdio-1.0
   main-is:             Benchmark.hs
+  hs-source-dirs:      benchmarks
   build-depends:       base >=4.6 && <4.8,
-                       mtl >=2.0 && <3.0,
-                       criterion >=0.8 && <0.10,
-                       pipes >=4.1 && <4.2,
-                       pipes-interleave >= 0.1 && <1.0,
-                       bytestring >=0.10 && <0.11,
-                       binary >=0.7 && <0.8,
-                       transformers >=0.3 && <0.5,
-                       lens >=3.10 && <4.3,
-                       containers >=0.5 && <0.6,
-                       vector >=0.10 && <0.11,
-                       errors >=1.4 && <1.5,
-                       mmap >=0.5 && <0.6
+                       b-tree,
+                       pipes,
+                       criterion >=0.8 && <2.0
   default-language:    Haskell2010
 
