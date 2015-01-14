@@ -82,3 +82,4 @@ stream bl = withHeader bl readContents
       case B.decodeOrFail bs of
         Left (_, _, e)    -> return $ Left e
         Right (bs', _, a) -> yield a >> go (n-1) bs'
+{-# INLINE stream #-}

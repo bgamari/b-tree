@@ -21,12 +21,14 @@ filterLeaves = do
       Leaf leaf  -> yield leaf
       _          -> return ()
     filterLeaves
+{-# INLINE filterLeaves #-}
 
 -- | Iterate over the leaves of the given tree in ascending key order.
 walkLeaves :: (Binary k, Binary v, Monad m)
            => LookupTree k v
            -> Producer (BLeaf k v) m (LBS.ByteString, Maybe String)
 walkLeaves b = walkNodes b >-> filterLeaves
+{-# INLINE walkLeaves #-}
 
 -- | Iterate over the nodes and leaves of the given tree. These aren't
 -- necessarily sorted.
@@ -34,6 +36,7 @@ walkNodes :: (Binary k, Binary v, Monad m)
           => LookupTree k v
           -> Producer (BTree k OnDisk v) m (LBS.ByteString, Maybe String)
 walkNodes b = walkNodesWithOffset b >-> PP.map snd
+{-# INLINE walkNodes #-}
 
 walkNodesWithOffset :: (Binary k, Binary v, Monad m)
                     => LookupTree k v
@@ -47,3 +50,4 @@ walkNodesWithOffset = go 0 . view (ltData . to LBS.fromStrict)
                 if LBS.null rest
                   then return (rest, Nothing)
                   else go (offset+o) rest
+{-# INLINE walkNodesWithOffset #-}

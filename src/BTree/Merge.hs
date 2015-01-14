@@ -37,6 +37,7 @@ mergeLeaves append destOrder destFile producers = do
   where
     doAppend (BLeaf k e) (BLeaf _ e') = BLeaf k <$> append e e'
     key (BLeaf k _) = k
+{-# INLINE mergeLeaves #-}
 
 -- | Merge several 'LookupTrees'
 --
@@ -51,6 +52,7 @@ mergeTrees :: (MonadIO m, Functor m, Binary k, Binary e, Ord k)
 mergeTrees append destOrder destFile trees = do
     mergeLeaves append destOrder destFile
     $ map sizedProducerForTree trees
+{-# INLINE mergeTrees #-}
 
 -- | Get a sized 'Producer' suitable for 'mergeLeaves' from a 'LookupTree'
 sizedProducerForTree :: (Monad m, Binary k, Binary e)
