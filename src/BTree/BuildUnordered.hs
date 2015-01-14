@@ -45,15 +45,15 @@ fromUnorderedToFile :: forall m e k r.
                     -> FilePath                   -- ^ Output file
                     -> Producer (BLeaf k e) m r   -- ^ 'Producer' of elements
                     -> EitherT String m ()
-fromUnorderedToFile scratch maxChunk order dest producer = do
-    bList <- lift (execStateT (fillLists producer) []) >>= goMerge
+fromUnorderedToFile scratch maxChunk order dest producer = {-# SCC fromUnorderedToFile #-} do
+    bList <- lift (execStateT (fillLists producer) []) >>= {-# SCC goMerge #-} goMerge
     size <- BL.length bList
-    stream <- BL.stream bList
-    lift $ fromOrderedToFile order size dest stream
+    stream <- {-# SCC stream #-} BL.stream bList
+    lift $ {-# SCC buildTree #-} fromOrderedToFile order size dest stream
     liftIO $ removeFile $ BL.filePath bList
   where
     fillLists :: Producer (BLeaf k e) m r -> StateT [BL.BinaryList (BLeaf k e)] m r
-    fillLists prod = do
+    fillLists prod = {-# SCC fillLists #-} do
       fname <- liftIO $ tempFilePath scratch "chunk.list"
       (leaves, rest) <- lift $ takeChunk maxChunk prod
       (bList, ()) <- lift $ BL.toBinaryList fname $ each $ S.toAscList leaves
