@@ -2,3 +2,5 @@
 *.hi
 *~
 \#*#
+TODO
+.emacs.desktop
