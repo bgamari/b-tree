@@ -36,7 +36,7 @@ library
                        BangPatterns,
                        GeneralizedNewtypeDeriving
 
-  build-depends:       base >=4.6 && <4.8,
+  build-depends:       base >=4.6 && <4.9,
                        mtl >=2.0 && <3.0,
                        pipes >=4.1 && <4.2,
                        pipes-interleave >= 0.1 && <1.0,
