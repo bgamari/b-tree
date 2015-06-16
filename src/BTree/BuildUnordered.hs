@@ -44,7 +44,7 @@ fromUnorderedToFile :: forall m e k r.
                     -> Order                      -- ^ Order of tree
                     -> FilePath                   -- ^ Output file
                     -> Producer (BLeaf k e) m r   -- ^ 'Producer' of elements
-                    -> EitherT String m ()
+                    -> ExceptT String m ()
 fromUnorderedToFile scratch maxChunk order dest producer = {-# SCC fromUnorderedToFile #-} do
     bList <- lift (execStateT (fillLists producer) []) >>= {-# SCC goMerge #-} goMerge
     size <- BL.length bList
@@ -62,7 +62,7 @@ fromUnorderedToFile scratch maxChunk order dest producer = {-# SCC fromUnordered
         Left r         -> return r
         Right nextProd -> fillLists nextProd
 
-    goMerge :: [BL.BinaryList (BLeaf k e)] -> EitherT String m (BL.BinaryList (BLeaf k e))
+    goMerge :: [BL.BinaryList (BLeaf k e)] -> ExceptT String m (BL.BinaryList (BLeaf k e))
     goMerge [l] = return l
     goMerge ls = do
       ls'' <- forM (splitChunks maxChunkMerge ls) $ \ls'->do
@@ -86,7 +86,7 @@ throwLeft :: Monad m => m (Either String r) -> m r
 throwLeft action = action >>= either error return
 
 mergeLists :: (Ord a, B.Binary a, MonadIO m)
-           => FilePath -> [BL.BinaryList a] -> EitherT String m (BL.BinaryList a)
+           => FilePath -> [BL.BinaryList a] -> ExceptT String m (BL.BinaryList a)
 mergeLists dest lists = do
     streams <- mapM BL.stream lists
     let prod = interleave compare (map throwLeft streams)

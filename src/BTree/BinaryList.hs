@@ -62,15 +62,15 @@ toBinaryList fname producer = do
 {-# INLINE toBinaryList #-}
 
 withHeader :: MonadIO m
-           => BinaryList a -> (Header -> Handle -> m b) -> EitherT String m b
+           => BinaryList a -> (Header -> Handle -> m b) -> ExceptT String m b
 withHeader (BinList fname) action = readWithHeader fname action
 
-length :: MonadIO m => BinaryList a -> EitherT String m Word64
+length :: MonadIO m => BinaryList a -> ExceptT String m Word64
 length bl = withHeader bl $ \hdr _ -> return $ hdrLength hdr
 
 -- | Stream the items out of a @BinaryList@
 stream :: forall m a. (B.Binary a, MonadIO m)
-       => BinaryList a -> EitherT String m (Producer a m (Either String ()))
+       => BinaryList a -> ExceptT String m (Producer a m (Either String ()))
 stream bl = withHeader bl readContents
   where
     readContents :: Header -> Handle -> m (Producer a m (Either String ()))

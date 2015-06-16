@@ -54,14 +54,14 @@ writeWithHeader fname prod = do
     return r
 {-# INLINE writeWithHeader #-}
 
-annotate :: Monad m => String -> EitherT String m a -> EitherT String m a
+annotate :: Monad m => String -> ExceptT String m a -> ExceptT String m a
 annotate ann = fmapLT ((ann++": ")++)
 
-runGetT :: Monad m => B.Get a -> LBS.ByteString -> EitherT String m a
+runGetT :: Monad m => B.Get a -> LBS.ByteString -> ExceptT String m a
 runGetT _get bs = do
     case B.runGetOrFail _get bs of
-      Left (_, _, e)  -> left e
-      Right (_, _, a) -> right a
+      Left (_, _, e)  -> throwE e
+      Right (_, _, a) -> return a
 
 -- | Read and verify the header from the file, then pass it along with the
 -- file's handle to an action. The file handle sits at the beginning of the
@@ -69,7 +69,7 @@ runGetT _get bs = do
 readWithHeader :: (MonadIO m, B.Binary hdr)
                => FilePath
                -> (hdr -> Handle -> m a)
-               -> EitherT String m a
+               -> ExceptT String m a
 readWithHeader fname action = do
     h <- liftIO $ openFile fname ReadMode
     -- read epilogue
@@ -77,7 +77,7 @@ readWithHeader fname action = do
     epiBytes <- liftIO (LBS.hGet h $ fromIntegral epiLength)
     epi <- annotate "Error reading epilogue" (runGetT B.get epiBytes)
     when (magic epi /= magicNumber) $
-        left "BinaryFile.readWithHeader: Bad magic number"
+        throwE "BinaryFile.readWithHeader: Bad magic number"
     -- read header
     let offset = fromIntegral epiLength + fromIntegral (headerLen epi)
     liftIO $ hSeek h SeekFromEnd (negate offset)

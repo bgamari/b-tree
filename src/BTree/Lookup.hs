@@ -26,10 +26,10 @@ fromByteString bs = do
 
 -- | Open a B-tree file.
 open :: FilePath -> IO (Either String (LookupTree k e))
-open fname = runEitherT $ do
+open fname = runExceptT $ do
     d <- fmapLT show $ tryIO $ mmapFileByteString fname Nothing
-    EitherT $ return $ fromByteString (LBS.fromStrict d)
-   
+    ExceptT $ return $ fromByteString (LBS.fromStrict d)
+
 -- | Lookup a key in a B-tree.
 lookup :: (Binary k, Binary e, Ord k)
        => LookupTree k e -> k -> Maybe e
