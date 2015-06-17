@@ -23,6 +23,7 @@ import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Binary as B
 import qualified Data.Binary.Get as B
 import qualified Data.Binary.Put as B
+import qualified Data.Binary.Builder as BB
 import Pipes
 
 import BTree.BinaryFile
@@ -46,19 +47,23 @@ instance B.Binary Header where
 toBinaryList :: forall m a r. (MonadIO m, B.Binary a)
              => FilePath -> Producer a m r -> m (BinaryList a, r)
 toBinaryList fname producer = do
-    writeWithHeader fname (go 0 producer)
+    writeWithHeader fname (go 0 producer BB.empty)
   where
-    go :: Int -> Producer a m r
+    go :: Int -> Producer a m r -> BB.Builder
        -> Producer LBS.ByteString m (Header, (BinaryList a, r))
-    go !n prod = do
+    go !n prod accum = do
         result <- lift $ next prod
         case result of
-          Left r ->
+          Left r -> do
             let hdr = Header (fromIntegral n)
-            in return (hdr, (BinList fname, r))
-          Right (a, prod') -> do
-            yield (B.encode a)
-            go (n+1) prod'
+            yield $ BB.toLazyByteString accum
+            return (hdr, (BinList fname, r))
+          Right (a, prod')
+            | n `mod` 100 == 0 -> do
+              yield $ BB.toLazyByteString accum
+              go (n+1) prod' (B.execPut $ B.put a)
+            | otherwise ->
+              go (n+1) prod' (accum `BB.append` B.execPut (B.put a))
 {-# INLINE toBinaryList #-}
 
 withHeader :: MonadIO m
