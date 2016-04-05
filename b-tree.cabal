@@ -17,14 +17,14 @@ source-repository head
   location:            git@github.com:bgamari/b-tree
 
 library
-  exposed-modules:     BTree
+  exposed-modules:     BTree,
+                       BTree.BinaryList
   other-modules:       BTree.Types,
                        BTree.Merge,
                        BTree.Builder,
                        BTree.Lookup,
                        BTree.Walk,
                        BTree.BinaryFile,
-                       BTree.BinaryList,
                        BTree.BuildUnordered
 
   other-extensions:    DeriveGeneric,
