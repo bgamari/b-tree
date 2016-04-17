@@ -1,3 +1,5 @@
+{-# LANGUAGE BangPatterns #-}
+
 module BTree.Walk ( walkLeaves
                   , walkNodes
                   , walkNodesWithOffset
@@ -40,7 +42,7 @@ walkNodesWithOffset :: (Binary k, Binary v, Monad m)
                     => LookupTree k v
                     -> Producer (Offset, BTree k OnDisk v) m (LBS.ByteString, Maybe String)
 walkNodesWithOffset = go 0 . view (ltData . to LBS.fromStrict)
-  where go offset bs =
+  where go !offset bs =
             case runGetOrFail get bs of
               Left (rest,_,err)  -> return (rest, Just err)
               Right (rest,o,a)   -> do
