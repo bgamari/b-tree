@@ -15,12 +15,10 @@ import Control.Lens
 -- progress through the file.
 
 filterLeaves :: Monad m => Pipe (BTree k OnDisk v) (BLeaf k v) m r
-filterLeaves = do
-    a <- await
-    case a of
-      Leaf leaf  -> yield leaf
-      _          -> return ()
-    filterLeaves
+filterLeaves = PP.mapFoldable getLeaf
+  where
+    getLeaf (Leaf leaf) = Just leaf
+    getLeaf _           = Nothing
 {-# INLINE filterLeaves #-}
 
 -- | Iterate over the leaves of the given tree in ascending key order.
