@@ -6,6 +6,7 @@ module BTree.BinaryList
       -- * Construction
     , toBinaryList
       -- * Fetching contents
+    , open
     , stream
       -- * Other queries
     , length
@@ -65,6 +66,12 @@ toBinaryList fname producer = do
             | otherwise ->
               go (n+1) prod' (accum `BB.append` B.execPut (B.put a))
 {-# INLINE toBinaryList #-}
+
+-- | Open a 'BinaryList' file.
+--
+-- TODO: Sanity checking at open time.
+open :: FilePath -> BinaryList a
+open = BinList
 
 withHeader :: MonadIO m
            => BinaryList a -> (Header -> Handle -> m b) -> ExceptT String m b
