@@ -1,4 +1,9 @@
-{-# LANGUAGE DeriveGeneric, FlexibleContexts, TemplateHaskell, UndecidableInstances, StandaloneDeriving #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE StandaloneDeriving #-}
 
 module BTree.Types where
 
@@ -33,7 +38,7 @@ instance Binary (OnDisk a) where
 
 -- | A tree leaf (e.g. key/value pair)
 data BLeaf k e = BLeaf !k !e
-               deriving (Generic)
+               deriving (Generic, Functor)
 
 deriving instance (Show k, Show e) => Show (BLeaf k e)
 
