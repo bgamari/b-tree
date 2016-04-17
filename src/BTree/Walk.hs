@@ -7,6 +7,7 @@ module BTree.Walk ( walkLeaves
 
 import BTree.Types
 import qualified Data.ByteString.Lazy as LBS
+import qualified Data.ByteString as BS
 import Pipes
 import qualified Pipes.Prelude as PP
 import Data.Binary
@@ -41,13 +42,14 @@ walkNodes b = walkNodesWithOffset b >-> PP.map snd
 walkNodesWithOffset :: (Binary k, Binary v, Monad m)
                     => LookupTree k v
                     -> Producer (Offset, BTree k OnDisk v) m (LBS.ByteString, Maybe String)
-walkNodesWithOffset = go 0 . view (ltData . to LBS.fromStrict)
+walkNodesWithOffset = go 0 . {-# SCC "buffer" #-}view ltData
   where go !offset bs =
-            case runGetOrFail get bs of
+            case runGetOrFail get (LBS.fromStrict bs) of
               Left (rest,_,err)  -> return (rest, Just err)
-              Right (rest,o,a)   -> do
+              Right (_,o,a)      -> do
                 yield (offset, a)
-                if LBS.null rest
-                  then return (rest, Nothing)
+                let rest = BS.drop (fromIntegral o) bs
+                if BS.null rest
+                  then return (LBS.fromStrict rest, Nothing)
                   else go (offset+o) rest
 {-# INLINE walkNodesWithOffset #-}
