@@ -11,6 +11,7 @@ module BTree ( -- * Basic types
              , open
              , fromByteString
              , lookup
+             , size
                -- * Merging trees
              , mergeTrees
              , mergeLeaves
