@@ -8,8 +8,10 @@
 module BTree.Types where
 
 import Data.Binary
+import Data.Binary.Get
+import Data.Binary.Put
 import GHC.Generics
-import Control.Monad (when)
+import Control.Monad (when, replicateM)
 import Control.Applicative
 import Control.Lens
 import Data.Int
@@ -73,14 +75,22 @@ instance (Binary k, Binary (f (BTree k f e)), Binary e)
   => Binary (BTree k f e) where
     get = do typ <- getWord8
              case typ of
-               0 -> Node <$> get <*> get
+               0 -> Node <$> get <*> getChildren
                1 -> bleaf <$> get <*> get
                _ -> fail "BTree.Types/get: Unknown node type"
       where bleaf k v = Leaf (BLeaf k v)
+            getChildren = do
+                len <- getWord32be
+                replicateM (fromIntegral len) $ (,) <$> get <*> get
     {-# INLINE get #-}
 
-    put (Node e0 es)         = putWord8 0 >> put e0 >> put es
-    put (Leaf (BLeaf k0 e))  = putWord8 1 >> put k0 >> put e
+    -- some versions of binary don't inline the Binary (,) instance, pitiful
+    -- performance ensues
+    put (Node e0 es)         = do putWord8 0
+                                  put e0
+                                  putWord32be (fromIntegral $ length es)
+                                  mapM_ (\(a,b) -> put a >> put b) es
+    put (Leaf (BLeaf k0 e))  =    putWord8 1 >> put k0 >> put e
     {-# INLINE put #-}
 
 magic :: Word64
