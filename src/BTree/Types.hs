@@ -26,7 +26,7 @@ type Size = Word64
 -- | The maximum number of children of a B-tree inner node
 type Order = Word64
 
--- | 'OnDisk a' is a reference to an object of type 'a' on disk.
+-- | @'OnDisk' a@ is a reference to an object of type @a@ on disk.
 -- The offset does not include the header; e.g. the first object after
 -- the header is located at offset 0.
 newtype OnDisk a = OnDisk Offset
@@ -59,10 +59,10 @@ instance (Binary k, Binary e) => Binary (BLeaf k e) where
     put (BLeaf k e) = put k >> put e
     {-# INLINE put #-}
 
--- | 'BTree k f e' is a B* tree of key type 'k' with elements of type 'e'.
--- Subtree references are contained within a type 'f'
+-- | @'BTree' k f e@ is a B* tree of key type @k@ with elements of type @e@.
+-- Subtree references are contained within a type @f@.
 --
--- The Node constructor contains a left child, and a list of key/child pairs
+-- The 'Node' constructor contains a left child, and a list of key/child pairs
 -- where each child's keys are greater than or equal to the given key.
 data BTree k f e = Node (f (BTree k f e)) [(k, f (BTree k f e))]
                  | Leaf !(BLeaf k e)
