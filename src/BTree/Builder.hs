@@ -1,4 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module BTree.Builder
     ( buildNodes, putBS
@@ -80,11 +81,13 @@ optimalFill order size = go (fromIntegral size)
                    _  -> go nNodes
       in nodes : rest
 
+type BuildM k e m a = StateT [DepthState k e] (DiskProducer (BTree k OnDisk e) m) a
+
 -- | Given a producer of a known number of leaves, produces an optimal B-tree.
 -- Technically the size is only an upper bound: the producer may
 -- terminate before providing the given number of leaves although the resulting
 -- tree will break the minimal fill invariant.
-buildNodes :: Monad m
+buildNodes :: forall m k e r. Monad m
            => Order -> Size
            -> DiskProducer (BLeaf k e) m r
            -> DiskProducer (BTree k OnDisk e) m (Size, OnDisk (BTree k OnDisk e))
@@ -93,10 +96,8 @@ buildNodes order size = {-# SCC buildNodes #-}
   where
     initialState = map (DepthS Seq.empty 0) $ optimalFill order size
     -- depth=0 denotes the bottom (leaves) of the tree.
-    loop :: Monad m
-         => Size -> DiskProducer (BLeaf k e) m r
-         -> StateT [DepthState k e] (DiskProducer (BTree k OnDisk e) m)
-                   (Size, OnDisk (BTree k OnDisk e))
+    loop :: Size -> DiskProducer (BLeaf k e) m r
+         -> BuildM k e m (Size, OnDisk (BTree k OnDisk e))
     loop n producer = do
         _next <- lift $ lift $ next' producer
         case _next of
@@ -109,16 +110,13 @@ buildNodes order size = {-# SCC buildNodes #-}
                 OnDisk offset <- processNode k $ Leaf leaf
                 loop (n-1) $ producer' (OnDisk offset)
 
-    isFilled :: Monad m
-             => StateT [DepthState k e] m Bool
+    isFilled :: BuildM k e m Bool
     isFilled = zoom (singular _head) $ do
         nodeCount <- use dNodeCount
         minFill:_ <- use dMinFill
         return $ nodeCount >= minFill
 
-    emitNode :: Monad m
-             => StateT [DepthState k e] (DiskProducer (BTree k OnDisk e) m)
-                       (OnDisk (BTree k OnDisk e))
+    emitNode :: BuildM k e m (OnDisk (BTree k OnDisk e))
     emitNode = do
         (k0,node0):nodes <- zoom (singular _head) $ do
             nodes <- uses dNodes F.toList
@@ -135,11 +133,8 @@ buildNodes order size = {-# SCC buildNodes #-}
             [_] -> lift $ respond newNode
             _   -> zoom (singular _tail) $ processNode k0 newNode
 
-    processNode :: Monad m
-                => k -> BTree k OnDisk e
-                -> StateT [DepthState k e]
-                          (DiskProducer (BTree k OnDisk e) m)
-                          (OnDisk (BTree k OnDisk e))
+    processNode :: k -> BTree k OnDisk e
+                -> BuildM k e m (OnDisk (BTree k OnDisk e))
     processNode startKey tree = do
         filled <- isFilled
         when filled $ void $ emitNode
@@ -149,11 +144,8 @@ buildNodes order size = {-# SCC buildNodes #-}
             dNodeCount += 1
         return offset
 
-    flushAll :: Monad m
-             => Size
-             -> StateT [DepthState k e]
-                       (DiskProducer (BTree k OnDisk e) m)
-                       (Size, OnDisk (BTree k OnDisk e))
+    flushAll :: Size
+             -> BuildM k e m (Size, OnDisk (BTree k OnDisk e))
     flushAll realSize = do
         s <- get
         case s of
