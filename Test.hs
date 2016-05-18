@@ -1,5 +1,5 @@
 import Control.Monad
-import Control.Monad.Trans.Writer                
+import Control.Monad.Trans.Writer
 import BTree.Builder
 import BTree.Walk
 import BTree.Merge
@@ -38,17 +38,17 @@ main = do
     Right lt <- open' assocs "hello-merged.btree"
     mapM_ (print . L.lookup lt) [0..n]
 
-    
+
 buildCheck :: (Ord k, Eq k, Eq v, Show k, Show v, Binary k, Binary v)
            => Order -> Size -> [(k,v)] -> IO ()
 buildCheck order size assocs = do
     fromOrderedToFile order size "test.btree" (each things)
     Right a <- open' assocs "test.btree"
     mapM_ putStrLn $ checkLookupTree (take (fromIntegral size) $ assocs) a
-           
+
 checkLookupTree :: (Ord k, Eq k, Eq v, Show k, Show v, Binary k, Binary v)
                 => [(k,v)] -> LookupTree k v -> [String]
-checkLookupTree assocs lt = execWriter $ 
+checkLookupTree assocs lt = execWriter $
     forM_ assocs $ \(a,b)->do
         case L.lookup lt a of
           Nothing        ->
