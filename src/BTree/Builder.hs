@@ -125,8 +125,10 @@ buildNodes order size = {-# SCC buildNodes #-}
             dMinFill %= tail
             return nodes
 
-        --when (null nodes)
-        --  $ error "BTree.Builder.buildNodes: Internal invariant broken: unexpected empty node"
+        -- We used to check the invariants of (not $ null nodes), however this
+        -- is wrong. nodes may be empty, for instance, when we are call from
+        -- the [_] branch of flushAll.
+
         let newNode = Node node0 nodes
         s <- get
         case s of
