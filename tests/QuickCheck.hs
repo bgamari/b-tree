@@ -9,7 +9,6 @@ mapToBLeafs :: M.Map k v -> [BT.BLeaf k v]
 mapToBLeafs = map (\(k,v)->BT.BLeaf k v) . M.toAscList
 
 test :: (Ord k, Eq v, Binary k, Binary v) => M.Map k v -> Property
-test m | M.size m == 0 = discard
 test m = ioProperty $ do
     let len = fromIntegral $ M.size m
     bs <- BT.fromOrderedToByteString 10 len (each $ mapToBLeafs m)

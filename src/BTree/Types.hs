@@ -101,7 +101,8 @@ data BTreeHeader k e = BTreeHeader { _btMagic   :: !Word64
                                    , _btVersion :: !Word64
                                    , _btOrder   :: !Order
                                    , _btSize    :: !Size
-                                   , _btRoot    :: !(OnDisk (BTree k OnDisk e))
+                                   , _btRoot    :: !(Maybe (OnDisk (BTree k OnDisk e)))
+                                     -- ^ 'Nothing' represents an empty tree
                                    }
                  deriving (Show, Eq, Generic)
 makeLenses ''BTreeHeader

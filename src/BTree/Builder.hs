@@ -165,11 +165,16 @@ buildTree :: (Monad m, Binary e, Binary k)
           => Order -> Size
           -> Producer (BLeaf k e) m r
           -> Producer LBS.ByteString m (BTreeHeader k e)
-buildTree _order size _producer
-  | size < 1                  = error "BTree.buildTree: Invalid tree size"
-buildTree order size producer = do
+buildTree order size  producer
+  | size < 0  = error "BTree.buildTree: Invalid tree size"
+  | size == 0 = return zeroSizedHeader
+  | otherwise = do
     (realSize, root) <- dropUpstream $ buildNodes order size (dropUpstream producer) >>~ putBS
-    return $ BTreeHeader magic 1 order realSize root
+    if realSize == 0
+      then return zeroSizedHeader
+      else return $ BTreeHeader magic 1 order realSize (Just root)
+  where
+    zeroSizedHeader = BTreeHeader magic 1 order 0 Nothing
 {-# INLINE buildTree #-}
 
 dropUpstream :: Monad m => Proxy X () () b m r -> Proxy X () b' b m r
@@ -201,7 +206,7 @@ fromOrderedToFile order size fname producer = do
     liftIO $ hClose h
     return ()
   where
-    invalidHeader = BTreeHeader 0 0 0 0 (OnDisk 0)
+    invalidHeader = BTreeHeader 0 0 0 0 Nothing
 {-# INLINE fromOrderedToFile #-}
 
 -- | Build a B-tree into @ByteString@

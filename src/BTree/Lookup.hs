@@ -34,7 +34,10 @@ open fname = runExceptT $ do
 -- | Lookup a key in a B-tree.
 lookup :: (Binary k, Binary e, Ord k)
        => LookupTree k e -> k -> Maybe e
-lookup lt k = go $ fetch lt (lt ^. ltHeader . btRoot)
+lookup lt k =
+    case lt ^. ltHeader . btRoot of
+      Just root -> go $ fetch lt root
+      Nothing   -> Nothing
   where
     go (Leaf (BLeaf k' e))
       | k' == k     = Just e
