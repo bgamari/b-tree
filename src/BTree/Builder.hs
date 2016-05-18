@@ -87,7 +87,7 @@ optimalFill order size = go (fromIntegral size)
 buildNodes :: Monad m
            => Order -> Size
            -> DiskProducer (BLeaf k e) m r
-           -> DiskProducer (BTree k OnDisk e) m (BTreeHeader k e)
+           -> DiskProducer (BTree k OnDisk e) m (Size, OnDisk (BTree k OnDisk e))
 buildNodes order size = {-# SCC buildNodes #-}
     flip evalStateT initialState . loop size
   where
@@ -96,7 +96,7 @@ buildNodes order size = {-# SCC buildNodes #-}
     loop :: Monad m
          => Size -> DiskProducer (BLeaf k e) m r
          -> StateT [DepthState k e] (DiskProducer (BTree k OnDisk e) m)
-                   (BTreeHeader k e)
+                   (Size, OnDisk (BTree k OnDisk e))
     loop n producer = do
         _next <- lift $ lift $ next' producer
         case _next of
@@ -153,14 +153,14 @@ buildNodes order size = {-# SCC buildNodes #-}
              => Size
              -> StateT [DepthState k e]
                        (DiskProducer (BTree k OnDisk e) m)
-                       (BTreeHeader k e)
+                       (Size, OnDisk (BTree k OnDisk e))
     flushAll realSize = do
         s <- get
         case s of
             []   -> error "BTree.Builder.flushAll: We should never get here"
             [_]  -> do -- We are at the top node, this shouldn't be flushed yet
                        root <- emitNode
-                       return $ BTreeHeader magic 1 order realSize root
+                       return (realSize, root)
             d:_  -> do when (not $ Seq.null $ d^.dNodes) $ void $ emitNode
                        zoom (singular _tail) $ flushAll realSize
 {-# INLINE buildNodes #-}
@@ -171,8 +171,11 @@ buildTree :: (Monad m, Binary e, Binary k)
           => Order -> Size
           -> Producer (BLeaf k e) m r
           -> Producer LBS.ByteString m (BTreeHeader k e)
-buildTree order size producer =
-    dropUpstream $ buildNodes order size (dropUpstream producer) >>~ putBS
+buildTree _order size _producer
+  | size < 1                  = error "BTree.buildTree: Invalid tree size"
+buildTree order size producer = do
+    (realSize, root) <- dropUpstream $ buildNodes order size (dropUpstream producer) >>~ putBS
+    return $ BTreeHeader magic 1 order realSize root
 {-# INLINE buildTree #-}
 
 dropUpstream :: Monad m => Proxy X () () b m r -> Proxy X () b' b m r
