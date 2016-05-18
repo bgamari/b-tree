@@ -90,14 +90,14 @@ type BuildM k e m a = StateT [DepthState k e] (DiskProducer (BTree k OnDisk e) m
 buildNodes :: forall m k e r. Monad m
            => Order -> Size
            -> DiskProducer (BLeaf k e) m r
-           -> DiskProducer (BTree k OnDisk e) m (Size, OnDisk (BTree k OnDisk e))
+           -> DiskProducer (BTree k OnDisk e) m (Size, Maybe (OnDisk (BTree k OnDisk e)))
 buildNodes order size = {-# SCC buildNodes #-}
     flip evalStateT initialState . loop size
   where
     initialState = map (DepthS Seq.empty 0) $ optimalFill order size
     -- depth=0 denotes the bottom (leaves) of the tree.
     loop :: Size -> DiskProducer (BLeaf k e) m r
-         -> BuildM k e m (Size, OnDisk (BTree k OnDisk e))
+         -> BuildM k e m (Size, Maybe (OnDisk (BTree k OnDisk e)))
     loop n producer = do
         _next <- lift $ lift $ next' producer
         case _next of
@@ -147,14 +147,15 @@ buildNodes order size = {-# SCC buildNodes #-}
         return offset
 
     flushAll :: Size
-             -> BuildM k e m (Size, OnDisk (BTree k OnDisk e))
+             -> BuildM k e m (Size, Maybe (OnDisk (BTree k OnDisk e)))
+    flushAll 0 = return (0, Nothing)
     flushAll realSize = do
         s <- get
         case s of
             []   -> error "BTree.Builder.flushAll: We should never get here"
             [_]  -> do -- We are at the top node, this shouldn't be flushed yet
                        root <- emitNode
-                       return (realSize, root)
+                       return (realSize, Just root)
             d:_  -> do when (not $ Seq.null $ d^.dNodes) $ void $ emitNode
                        zoom (singular _tail) $ flushAll realSize
 {-# INLINE buildNodes #-}
@@ -172,7 +173,7 @@ buildTree order size  producer
     (realSize, root) <- dropUpstream $ buildNodes order size (dropUpstream producer) >>~ putBS
     if realSize == 0
       then return zeroSizedHeader
-      else return $ BTreeHeader magic 1 order realSize (Just root)
+      else return $ BTreeHeader magic 1 order realSize root
   where
     zeroSizedHeader = BTreeHeader magic 1 order 0 Nothing
 {-# INLINE buildTree #-}
