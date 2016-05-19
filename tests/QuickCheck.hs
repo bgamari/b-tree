@@ -1,4 +1,6 @@
 import Test.QuickCheck
+import Test.Tasty
+import Test.Tasty.QuickCheck
 import qualified Data.Map as M
 import Data.Foldable (foldl', foldMap)
 import Data.Binary (Binary)
@@ -37,7 +39,12 @@ testWalk size m = ioProperty $ do
         xs = map (\(BT.BLeaf k v) -> (k, v)) $ PP.toList $ void $ BT.walkLeaves bt
     return $ xs == take (fromIntegral size) (M.toAscList m)
 
-main = do
-    quickCheck (test :: BT.Size -> M.Map Int Int -> Property)
-    quickCheck (testExact :: M.Map Int Int -> Property)
-    quickCheck (testWalk :: BT.Size -> M.Map Int Int -> Property)
+main = defaultMain $ testGroup "tests"
+    [ testGroup "lookup"
+      [ testProperty "inexact size" (test :: BT.Size -> M.Map Int Int -> Property)
+      , testProperty "exact size" (testExact :: M.Map Int Int -> Property)
+      ]
+    , testGroup "walk"
+      [ testProperty "walk" (testWalk :: BT.Size -> M.Map Int Int -> Property)
+      ]
+    ]

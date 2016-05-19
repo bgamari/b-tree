@@ -63,7 +63,9 @@ test-suite btree-quickcheck
                        pipes,
                        binary,
                        b-tree,
-                       QuickCheck
+                       QuickCheck,
+                       tasty,
+                       tasty-quickcheck
 
 benchmark btree-benchmark
   type:                exitcode-stdio-1.0
