@@ -4,12 +4,14 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE RecordWildCards #-}
 
 module BTree.Types where
 
 import Data.Binary
 import Data.Binary.Get
 import Data.Binary.Put
+import Data.Maybe (fromMaybe)
 import GHC.Generics
 import Control.Monad (when, replicateM)
 import Control.Applicative
@@ -107,7 +109,22 @@ data BTreeHeader k e = BTreeHeader { _btMagic   :: !Word64
                  deriving (Show, Eq, Generic)
 makeLenses ''BTreeHeader
 
-instance Binary (BTreeHeader k e)
+-- | It is critical that this encoding is of fixed size
+instance Binary (BTreeHeader k e) where
+    get = do
+        _btMagic <- get
+        _btVersion <- get
+        _btOrder <- get
+        _btSize <- get
+        root <- get
+        let _btRoot = if root == OnDisk 0 then Nothing else Just root
+        return BTreeHeader {..}
+    put (BTreeHeader {..}) = do
+        put _btMagic
+        put _btVersion
+        put _btOrder
+        put _btSize
+        put $ fromMaybe (OnDisk 0) _btRoot
 
 validateHeader :: BTreeHeader k e -> Either String ()
 validateHeader hdr = do
