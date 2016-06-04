@@ -2,6 +2,7 @@ module BTree.Lookup ( LookupTree
                     , open
                     , fromByteString
                     , lookup
+                    , size
                     ) where
 
 import Prelude hiding (lookup)
@@ -45,3 +46,7 @@ lookup lt k = go $ fetch lt (lt ^. ltHeader . btRoot)
           case takeWhile (\(k',_)->k' <= k) children of
             []  -> Nothing
             xs  -> go $ fetch lt $ snd $ last xs
+
+-- | How many keys are in a 'LookupTree'.
+size :: LookupTree k e -> Size
+size = _btSize . _ltHeader
