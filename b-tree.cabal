@@ -63,7 +63,7 @@ test-suite btree-quickcheck
                        pipes,
                        binary,
                        b-tree,
-                       QuickCheck,
+                       QuickCheck >= 2.8.2,
                        tasty,
                        tasty-quickcheck
 
