@@ -5,12 +5,6 @@ import Data.Binary (Binary)
 import Pipes hiding (discard)
 import qualified BTree as BT
 
-instance (Ord k, Arbitrary k, Arbitrary v) => Arbitrary (M.Map k v) where
-    arbitrary = do
-        ks <- arbitrary
-        vs <- arbitrary
-        return $ foldl' (\m (k,v)->M.insert k v m) M.empty (zip ks vs)
-
 mapToBLeafs :: M.Map k v -> [BT.BLeaf k v]
 mapToBLeafs = map (\(k,v)->BT.BLeaf k v) . M.toAscList
 
