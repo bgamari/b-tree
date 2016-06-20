@@ -1,5 +1,3 @@
-{-# LANGUAGE TemplateHaskell, BangPatterns, GeneralizedNewtypeDeriving #-}
-
 module BTree.Merge ( mergeTrees
                    , mergeLeaves
                    , sizedProducerForTree
