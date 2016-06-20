@@ -89,7 +89,7 @@ mergeLists :: (Ord a, B.Binary a, MonadIO m)
            => FilePath -> [BL.BinaryList a] -> ExceptT String m (BL.BinaryList a)
 mergeLists dest lists = do
     streams <- mapM BL.stream lists
-    let prod = interleave compare (map throwLeft streams)
+    let prod = interleave (map throwLeft streams)
     (bList, ()) <- lift $ BL.toBinaryList dest prod
     return bList
 {-# INLINE mergeLists #-}

@@ -1,5 +1,5 @@
 name:                b-tree
-version:             0.1.2
+version:             0.1.3
 synopsis:            Immutable disk-based B* trees
 description:         Immutable disk-based B* trees
 homepage:            http://github.com/bgamari/b-tree
@@ -39,7 +39,7 @@ library
   build-depends:       base >=4.6 && <4.10,
                        mtl >=2.0 && <3.0,
                        pipes >=4.1 && <4.2,
-                       pipes-interleave >= 0.1 && <1.0,
+                       pipes-interleave >= 1.0 && <2.0,
                        bytestring >=0.10 && <0.11,
                        binary >=0.8.4 && <0.9,
                        transformers >=0.3 && <0.6,
