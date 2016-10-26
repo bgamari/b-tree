@@ -3,7 +3,9 @@
 {-# LANGUAGE FlexibleContexts #-}
 
 module BTree.BuildUnordered
-    ( fromUnorderedToFile ) where
+    ( fromUnorderedToFile
+    , fromUnorderedToList
+    ) where
 
 import Control.Monad.Trans.State
 import Control.Error
@@ -46,13 +48,23 @@ fromUnorderedToFile :: forall m e k r.
                     -> Producer (BLeaf k e) m r   -- ^ 'Producer' of elements
                     -> ExceptT String m ()
 fromUnorderedToFile scratch maxChunk order dest producer = {-# SCC fromUnorderedToFile #-} do
-    bList <- lift (execStateT (fillLists producer) []) >>= {-# SCC goMerge #-} goMerge
+    bList <- fromUnorderedToList scratch maxChunk producer
     size <- BL.length bList
     stream <- {-# SCC stream #-} BL.stream bList
     lift $ {-# SCC buildTree #-} fromOrderedToFile order size dest stream
     liftIO $ removeFile $ BL.filePath bList
+{-# INLINE fromUnorderedToFile #-}
+
+fromUnorderedToList :: forall m a r.
+                       (MonadIO m, B.Binary a, Ord a)
+                    => FilePath                   -- ^ Path to scratch directory
+                    -> Int                        -- ^ Maximum chunk size
+                    -> Producer a m r             -- ^ 'Producer' of elements
+                    -> ExceptT String m (BL.BinaryList a)
+fromUnorderedToList scratch maxChunk producer = do
+    lift (execStateT (fillLists producer) []) >>= {-# SCC goMerge #-} goMerge
   where
-    fillLists :: Producer (BLeaf k e) m r -> StateT [BL.BinaryList (BLeaf k e)] m r
+    fillLists :: Producer a m r -> StateT [BL.BinaryList a] m r
     fillLists prod = {-# SCC fillLists #-} do
       fname <- liftIO $ tempFilePath scratch "chunk.list"
       (leaves, rest) <- lift $ takeChunk maxChunk prod
@@ -62,7 +74,7 @@ fromUnorderedToFile scratch maxChunk order dest producer = {-# SCC fromUnordered
         Left r         -> return r
         Right nextProd -> fillLists nextProd
 
-    goMerge :: [BL.BinaryList (BLeaf k e)] -> ExceptT String m (BL.BinaryList (BLeaf k e))
+    goMerge :: [BL.BinaryList a] -> ExceptT String m (BL.BinaryList a)
     goMerge [l] = return l
     goMerge ls = do
       ls'' <- forM (splitChunks maxChunkMerge ls) $ \ls'->do
@@ -71,7 +83,7 @@ fromUnorderedToFile scratch maxChunk order dest producer = {-# SCC fromUnordered
         liftIO $ mapM_ (removeFile . BL.filePath) ls'
         return list
       goMerge ls''
-{-# INLINE fromUnorderedToFile #-}
+{-# INLINE fromUnorderedToList #-}
 
 -- | Split the list into chunks of bounded size and run each through a function
 splitChunks :: Int -> [a] -> [[a]]
@@ -85,8 +97,10 @@ splitChunks chunkSize = go
 throwLeft :: Monad m => m (Either String r) -> m r
 throwLeft action = action >>= either error return
 
-mergeLists :: (Ord a, B.Binary a, MonadIO m)
-           => FilePath -> [BL.BinaryList a] -> ExceptT String m (BL.BinaryList a)
+mergeLists :: (B.Binary a, Ord a, MonadIO m)
+           => FilePath
+           -> [BL.BinaryList a]
+           -> ExceptT String m (BL.BinaryList a)
 mergeLists dest lists = do
     streams <- mapM BL.stream lists
     let prod = interleave (map throwLeft streams)
