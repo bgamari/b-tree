@@ -3,15 +3,14 @@ module BTree.Merge ( mergeTrees
                    , sizedProducerForTree
                    ) where
 
-import Prelude hiding (sum)
 import Control.Applicative
 import Data.Foldable
-import Data.Function (on)
 import Control.Monad.State hiding (forM_)
 import Data.Binary
 import Control.Lens
 import Pipes
 import Pipes.Interleave
+import Prelude hiding (sum)
 
 import BTree.Types
 import BTree.Builder
@@ -34,7 +33,6 @@ mergeLeaves append destOrder destFile producers = do
       mergeM doAppend (map snd producers)
   where
     doAppend (BLeaf k e) (BLeaf _ e') = BLeaf k <$> append e e'
-    key (BLeaf k _) = k
 {-# INLINE mergeLeaves #-}
 
 -- | Merge several 'LookupTrees'
