@@ -8,15 +8,17 @@
 
 module BTree.Types where
 
-import Data.Binary
-import Data.Binary.Get
-import Data.Binary.Put
+import Control.Applicative
 import Data.Maybe (fromMaybe)
 import GHC.Generics
 import Control.Monad (when, replicateM)
-import Control.Applicative
-import Control.Lens
 import Data.Int
+import Prelude
+
+import Data.Binary
+import Data.Binary.Get
+import Data.Binary.Put
+import Control.Lens
 import qualified Data.ByteString as BS
 
 -- | An offset within the stream
