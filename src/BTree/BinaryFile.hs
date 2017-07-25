@@ -1,3 +1,5 @@
+-- | This module provides helpers for emitting and reading binary files with
+-- a trailing "header".
 module BTree.BinaryFile
     ( writeWithHeader
     , readWithHeader
@@ -15,9 +17,6 @@ import qualified Data.Binary as B
 import qualified Data.Binary.Get as B
 import qualified Data.Binary.Put as B
 import Pipes
-
--- | This module provides helpers for emitting and reading binary files with
--- a trailing "header".
 
 -- | An internal data structure placed at the very end of the file which
 -- describes the header and provides a magic number for sanity checking.
