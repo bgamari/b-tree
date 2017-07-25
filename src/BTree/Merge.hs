@@ -6,6 +6,7 @@ module BTree.Merge ( mergeTrees
 import Control.Applicative
 import Data.Foldable
 import Control.Monad.State hiding (forM_)
+import Control.Monad.Catch
 import Data.Binary
 import Control.Lens
 import Pipes
@@ -21,7 +22,7 @@ import BTree.Walk
 -- Each producer must be annotated with the number of leaves it is
 -- expected to produce. The size of the resulting tree will be at most
 -- the sum of these sizes.
-mergeLeaves :: (MonadIO m, Functor m, Binary k, Binary e, Ord k)
+mergeLeaves :: (MonadMask m, MonadIO m, Functor m, Binary k, Binary e, Ord k)
             => (e -> e -> m e)               -- ^ merge operation on elements
             -> Order                         -- ^ order of merged tree
             -> FilePath                      -- ^ name of output file
@@ -39,7 +40,7 @@ mergeLeaves append destOrder destFile producers = do
 --
 -- This is a convenience function for merging several trees already on
 -- disk. For a more flexible interface, see 'mergeLeaves'.
-mergeTrees :: (MonadIO m, Functor m, Binary k, Binary e, Ord k)
+mergeTrees :: (MonadMask m, MonadIO m, Functor m, Binary k, Binary e, Ord k)
            => (e -> e -> m e)        -- ^ merge operation on elements
            -> Order                  -- ^ order of merged tree
            -> FilePath               -- ^ name of output file

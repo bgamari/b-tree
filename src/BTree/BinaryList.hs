@@ -13,12 +13,13 @@ module BTree.BinaryList
     , filePath
     ) where
 
-import Prelude hiding (length)
 import Control.Applicative
 import Control.Monad.Trans.Class
+import Control.Monad.Catch
 import Control.Error
 import Data.Word
 import System.IO
+import Prelude hiding (length)
 
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Binary as B
@@ -45,7 +46,7 @@ instance B.Binary Header where
     put (Header l) = B.putWord64le l
 
 -- | Encode the items of the given producer
-toBinaryList :: forall m a r. (MonadIO m, B.Binary a)
+toBinaryList :: forall m a r. (MonadMask m, MonadIO m, B.Binary a)
              => FilePath -> Producer a m r -> m (BinaryList a, r)
 toBinaryList fname producer = do
     writeWithHeader fname (go 0 producer BB.empty)
@@ -73,15 +74,16 @@ toBinaryList fname producer = do
 open :: FilePath -> BinaryList a
 open = BinList
 
-withHeader :: MonadIO m
+withHeader :: (MonadMask m, MonadIO m)
            => BinaryList a -> (Header -> Handle -> m b) -> ExceptT String m b
 withHeader (BinList fname) action = readWithHeader fname action
 
-length :: MonadIO m => BinaryList a -> ExceptT String m Word64
+length :: (MonadMask m, MonadIO m)
+       => BinaryList a -> ExceptT String m Word64
 length bl = withHeader bl $ \hdr _ -> return $ hdrLength hdr
 
 -- | Stream the items out of a @BinaryList@
-stream :: forall m a. (B.Binary a, MonadIO m)
+stream :: forall m a. (B.Binary a, MonadMask m, MonadIO m)
        => BinaryList a -> ExceptT String m (Producer a m (Either String ()))
 stream bl = withHeader bl readContents
   where

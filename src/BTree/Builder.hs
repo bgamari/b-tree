@@ -9,6 +9,7 @@ module BTree.Builder
 
 import Control.Monad.Trans.State.Strict
 import Control.Monad.IO.Class
+import Control.Monad.Catch
 import Control.Monad
 
 import Data.Foldable as F
@@ -192,20 +193,18 @@ dropUpstream = {-# SCC dropUpstream #-} go
 --
 -- As the name suggests, this requires that the @Producer@ emits
 -- leaves in ascending key order.
-fromOrderedToFile :: (MonadIO m, Binary e, Binary k)
+fromOrderedToFile :: (MonadMask m, MonadIO m, Binary e, Binary k)
                   => Order                     -- ^ Order of tree
                   -> Size                      -- ^ Maximum tree size
                   -> FilePath                  -- ^ Output file
                   -> Producer (BLeaf k e) m r  -- ^ 'Producer' of elements
                   -> m ()
-fromOrderedToFile order size fname producer = do
-    h <- liftIO $ openFile fname WriteMode
-    liftIO $ LBS.hPut h $ B.encode invalidHeader
-    hdr <- runEffect $ for (buildTree order size producer) $ liftIO . LBS.hPut h
-    liftIO $ hSeek h AbsoluteSeek 0
-    liftIO $ LBS.hPut h $ B.encode hdr
-    liftIO $ hClose h
-    return ()
+fromOrderedToFile order size fname producer =
+    bracket (liftIO $ openFile fname WriteMode) (liftIO . hClose) $ \h -> do
+        liftIO $ LBS.hPut h $ B.encode invalidHeader
+        hdr <- runEffect $ for (buildTree order size producer) $ liftIO . LBS.hPut h
+        liftIO $ hSeek h AbsoluteSeek 0
+        liftIO $ LBS.hPut h $ B.encode hdr
   where
     invalidHeader = BTreeHeader 0 0 0 0 Nothing
 {-# INLINE fromOrderedToFile #-}

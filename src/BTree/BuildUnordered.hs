@@ -8,6 +8,7 @@ module BTree.BuildUnordered
     ) where
 
 import Control.Monad.Trans.State
+import Control.Monad.Catch
 import Control.Error
 import Data.Traversable (forM)
 
@@ -40,7 +41,8 @@ tempFilePath dir template = do
 -- leaves are collected, sorted in memory, and then written to intermediate
 -- trees. At the end these trees are then merged.
 fromUnorderedToFile :: forall m e k r.
-                       (MonadIO m, B.Binary (BLeaf k e), B.Binary k, B.Binary e, Ord k)
+                       (MonadMask m, MonadIO m,
+                        B.Binary (BLeaf k e), B.Binary k, B.Binary e, Ord k)
                     => FilePath                   -- ^ Path to scratch directory
                     -> Int                        -- ^ Maximum chunk size
                     -> Order                      -- ^ Order of tree
@@ -56,7 +58,7 @@ fromUnorderedToFile scratch maxChunk order dest producer = {-# SCC fromUnordered
 {-# INLINE fromUnorderedToFile #-}
 
 fromUnorderedToList :: forall m a r.
-                       (MonadIO m, B.Binary a, Ord a)
+                       (MonadMask m, MonadIO m, B.Binary a, Ord a)
                     => FilePath                   -- ^ Path to scratch directory
                     -> Int                        -- ^ Maximum chunk size
                     -> Producer a m r             -- ^ 'Producer' of elements
@@ -97,7 +99,7 @@ splitChunks chunkSize = go
 throwLeft :: Monad m => m (Either String r) -> m r
 throwLeft action = action >>= either error return
 
-mergeLists :: (B.Binary a, Ord a, MonadIO m)
+mergeLists :: (B.Binary a, Ord a, MonadMask m, MonadIO m)
            => FilePath
            -> [BL.BinaryList a]
            -> ExceptT String m (BL.BinaryList a)
