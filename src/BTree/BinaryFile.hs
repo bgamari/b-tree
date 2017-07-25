@@ -12,6 +12,7 @@ import Control.Monad.Catch
 import Control.Applicative
 import Data.Word
 import System.IO
+import Prelude
 
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Binary as B
