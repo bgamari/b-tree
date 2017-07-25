@@ -36,10 +36,10 @@ library
                        GeneralizedNewtypeDeriving
 
   hs-source-dirs:      src
-  build-depends:       base >=4.6 && <4.10,
+  build-depends:       base >=4.6 && <4.11,
                        mtl >=2.0 && <3.0,
                        pipes >=4.1 && <4.4,
-                       pipes-interleave >= 1.0 && <2.0,
+                       pipes-interleave >= 1.0 && <2.2,
                        bytestring >=0.10 && <0.11,
                        binary >=0.8.4 && <0.9,
                        transformers >=0.3 && <0.6,
