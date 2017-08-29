@@ -34,7 +34,7 @@ import BTree.Types
 type DiskProducer a = Proxy X () (OnDisk a) a
 
 putBS :: (Binary a, Monad m) => a -> Proxy (OnDisk a) a () LBS.ByteString m r
-putBS a0 = {-# SCC putBS #-} evalStateT (go a0) 0
+putBS a0 = {-# SCC "putBS" #-} evalStateT (go a0) 0
   where
     go a = do
         s <- get
@@ -92,7 +92,7 @@ buildNodes :: forall m k e r. Monad m
            => Order -> Size
            -> DiskProducer (BLeaf k e) m r
            -> DiskProducer (BTree k OnDisk e) m (Size, Maybe (OnDisk (BTree k OnDisk e)))
-buildNodes order size = {-# SCC buildNodes #-}
+buildNodes order size = {-# SCC "buildNodes" #-}
     flip evalStateT initialState . loop size
   where
     initialState = map (DepthS Seq.empty 0) $ optimalFill order size
@@ -180,7 +180,7 @@ buildTree order size  producer
 {-# INLINE buildTree #-}
 
 dropUpstream :: Monad m => Proxy X () () b m r -> Proxy X () b' b m r
-dropUpstream = {-# SCC dropUpstream #-} go
+dropUpstream = {-# SCC "dropUpstream" #-} go
   where
     go producer = do
         n <- lift $ next producer
