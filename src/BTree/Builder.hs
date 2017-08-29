@@ -16,6 +16,7 @@ import Data.Foldable as F
 import qualified Data.Sequence as Seq
 import           Data.Sequence (Seq)
 
+import Data.Word
 import Data.Ratio
 import Control.Lens
 import System.IO
@@ -67,16 +68,16 @@ next' = go
 -- | Compute the optimal node sizes for each stratum of a tree of
 -- given size and order
 optimalFill :: Order -> Size -> [[Int]]
-optimalFill order size = go (fromIntegral size)
+optimalFill order size = go size
   where
-    go :: Int -> [[Int]]
+    go :: Word64 -> [[Int]]
     go 0 = error "BTree.Builder.optimalFill: zero size"
     go n =
       let nNodes = ceiling (n % order')
-          order' = fromIntegral order :: Int
+          order' = fromIntegral order :: Word64
           nodes = let (nPerNode, leftover) = n `divMod` nNodes
-                  in zipWith (+) (replicate nNodes nPerNode)
-                                 (replicate leftover 1 ++ repeat 0)
+                  in zipWith (+) (replicate (fromIntegral nNodes) (fromIntegral nPerNode))
+                                 (replicate (fromIntegral leftover) 1 ++ repeat 0)
           rest = case nNodes of
                    1  -> []
                    _  -> go nNodes
