@@ -16,6 +16,7 @@ import Data.Foldable as F
 import qualified Data.Sequence as Seq
 import           Data.Sequence (Seq)
 
+import Data.Word
 import Data.Ratio
 import Control.Lens
 import System.IO
@@ -34,7 +35,7 @@ import BTree.Types
 type DiskProducer a = Proxy X () (OnDisk a) a
 
 putBS :: (Binary a, Monad m) => a -> Proxy (OnDisk a) a () LBS.ByteString m r
-putBS a0 = {-# SCC putBS #-} evalStateT (go a0) 0
+putBS a0 = {-# SCC "putBS" #-} evalStateT (go a0) 0
   where
     go a = do
         s <- get
@@ -67,16 +68,16 @@ next' = go
 -- | Compute the optimal node sizes for each stratum of a tree of
 -- given size and order
 optimalFill :: Order -> Size -> [[Int]]
-optimalFill order size = go (fromIntegral size)
+optimalFill order size = go size
   where
-    go :: Int -> [[Int]]
+    go :: Word64 -> [[Int]]
     go 0 = error "BTree.Builder.optimalFill: zero size"
     go n =
       let nNodes = ceiling (n % order')
-          order' = fromIntegral order :: Int
+          order' = fromIntegral order :: Word64
           nodes = let (nPerNode, leftover) = n `divMod` nNodes
-                  in zipWith (+) (replicate nNodes nPerNode)
-                                 (replicate leftover 1 ++ repeat 0)
+                  in zipWith (+) (replicate (fromIntegral nNodes) (fromIntegral nPerNode))
+                                 (replicate (fromIntegral leftover) 1 ++ repeat 0)
           rest = case nNodes of
                    1  -> []
                    _  -> go nNodes
@@ -92,7 +93,7 @@ buildNodes :: forall m k e r. Monad m
            => Order -> Size
            -> DiskProducer (BLeaf k e) m r
            -> DiskProducer (BTree k OnDisk e) m (Size, Maybe (OnDisk (BTree k OnDisk e)))
-buildNodes order size = {-# SCC buildNodes #-}
+buildNodes order size = {-# SCC "buildNodes" #-}
     flip evalStateT initialState . loop size
   where
     initialState = map (DepthS Seq.empty 0) $ optimalFill order size
@@ -180,7 +181,7 @@ buildTree order size  producer
 {-# INLINE buildTree #-}
 
 dropUpstream :: Monad m => Proxy X () () b m r -> Proxy X () b' b m r
-dropUpstream = {-# SCC dropUpstream #-} go
+dropUpstream = {-# SCC "dropUpstream" #-} go
   where
     go producer = do
         n <- lift $ next producer

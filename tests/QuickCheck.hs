@@ -32,19 +32,20 @@ test size m = ioProperty $ do
     return $ all (\(k,v)->BT.lookup bt k == Just v) (take (fromIntegral size) $ M.toAscList m)
 
 testWalk :: (Ord k, Eq v, Binary k, Binary v)
-         => BT.Size -> M.Map k v -> Property
-testWalk size m = ioProperty $ do
-    bs <- BT.fromOrderedToByteString 10 size (each $ mapToBLeafs m)
+         => Positive Int -> M.Map k v -> Property
+testWalk (Positive size) m = ioProperty $ do
+    bs <- BT.fromOrderedToByteString 10 (fromIntegral size) (each $ mapToBLeafs m)
     let Right bt = BT.fromByteString bs
         xs = map (\(BT.BLeaf k v) -> (k, v)) $ PP.toList $ void $ BT.walkLeaves bt
-    return $ xs == take (fromIntegral size) (M.toAscList m)
+    return $ xs == take size (M.toAscList m)
 
+main :: IO ()
 main = defaultMain $ testGroup "tests"
     [ testGroup "lookup"
       [ testProperty "inexact size" (test :: BT.Size -> M.Map Int Int -> Property)
       , testProperty "exact size" (testExact :: M.Map Int Int -> Property)
       ]
     , testGroup "walk"
-      [ testProperty "walk" (testWalk :: BT.Size -> M.Map Int Int -> Property)
+      [ testProperty "walk" (testWalk :: Positive Int -> M.Map Int Int -> Property)
       ]
     ]
