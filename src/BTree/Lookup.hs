@@ -9,6 +9,7 @@ import Prelude hiding (lookup)
 import Control.Error
 import Control.Lens hiding (children)
 import qualified Data.ByteString as BS
+import qualified Data.Vector as V
 import qualified Data.ByteString.Lazy as LBS
 import Data.Binary
 import System.IO.MMap
@@ -42,13 +43,15 @@ lookup lt k =
     go (Leaf (BLeaf k' e))
       | k' == k     = Just e
       | otherwise   = Nothing
-    go (Node c0 []) = go $ fetch lt c0 -- is this case necessary?
-    go (Node c0 children@((k0,_):_))
-      | k < k0      = go $ fetch lt c0
+    go (Node c0 children)
+      | V.null children = go $ fetch lt c0 -- is this case necessary?
+      | let (k0,_) = V.head children
+      , k < k0      = go $ fetch lt c0
       | otherwise   =
-          case takeWhile (\(k',_)->k' <= k) children of
-            []  -> Nothing
-            xs  -> go $ fetch lt $ snd $ last xs
+          case V.takeWhile (\(k',_)->k' <= k) children of
+            rest
+              | V.null rest -> Nothing
+              | otherwise   -> go $ fetch lt $ snd $ V.last rest
 
 -- | How many keys are in a 'LookupTree'.
 size :: LookupTree k e -> Size

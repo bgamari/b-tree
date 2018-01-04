@@ -11,7 +11,7 @@ module BTree.Types where
 import Control.Applicative
 import Data.Maybe (fromMaybe)
 import GHC.Generics
-import Control.Monad (when, replicateM)
+import Control.Monad (when)
 import Data.Int
 import Prelude
 
@@ -19,6 +19,8 @@ import Data.Binary
 import Data.Binary.Get
 import Data.Binary.Put
 import Control.Lens
+import qualified Data.Vector as V
+import Data.Vector.Binary
 import qualified Data.ByteString as BS
 
 -- | An offset within the stream
@@ -68,7 +70,7 @@ instance (Binary k, Binary e) => Binary (BLeaf k e) where
 --
 -- The 'Node' constructor contains a left child, and a list of key/child pairs
 -- where each child's keys are greater than or equal to the given key.
-data BTree k f e = Node (f (BTree k f e)) [(k, f (BTree k f e))]
+data BTree k f e = Node (f (BTree k f e)) (V.Vector (k, f (BTree k f e)))
                  | Leaf !(BLeaf k e)
                  deriving (Generic)
 
@@ -83,18 +85,17 @@ instance (Binary k, Binary (f (BTree k f e)), Binary e)
                1 -> bleaf <$> get <*> get
                _ -> fail "BTree.Types/get: Unknown node type"
       where bleaf k v = Leaf (BLeaf k v)
-            getChildren = do
-                len <- getWord32be
-                replicateM (fromIntegral len) $ (,) <$> get <*> get
+            getChildren =
+                genericGetVectorWith (fromIntegral <$> getWord32be) ((,) <$> get <*> get)
     {-# INLINE get #-}
 
     -- some versions of binary don't inline the Binary (,) instance, pitiful
     -- performance ensues
-    put (Node e0 es)         = do putWord8 0
-                                  put e0
-                                  putWord32be (fromIntegral $ length es)
-                                  mapM_ (\(a,b) -> put a >> put b) es
-    put (Leaf (BLeaf k0 e))  =    putWord8 1 >> put k0 >> put e
+    put (Node e0 es) = do
+        putWord8 0
+        put e0
+        genericPutVectorWith (putWord32be . fromIntegral) (\(a,b) -> put a >> put b) es
+    put (Leaf (BLeaf k0 e)) = putWord8 1 >> put k0 >> put e
     {-# INLINE put #-}
 
 magic :: Word64

@@ -24,6 +24,7 @@ import System.IO
 import qualified Data.Binary as B
 import           Data.Binary (Binary)
 import qualified Data.ByteString.Lazy as LBS
+import qualified Data.Vector as V
 
 import Pipes
 import Pipes.Core
@@ -131,7 +132,7 @@ buildNodes order size = {-# SCC "buildNodes" #-}
         -- is wrong. nodes may be empty, for instance, when we are call from
         -- the [_] branch of flushAll.
 
-        let newNode = Node node0 nodes
+        let newNode = Node node0 (V.fromList nodes)
         s <- get
         case s of
             [_] -> lift $ respond newNode
