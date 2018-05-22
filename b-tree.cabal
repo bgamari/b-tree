@@ -36,7 +36,7 @@ library
                        GeneralizedNewtypeDeriving
 
   hs-source-dirs:      src
-  build-depends:       base >=4.6 && <4.11,
+  build-depends:       base >=4.6 && <4.12,
                        mtl >=2.0 && <3.0,
                        pipes >=4.1 && <4.4,
                        pipes-interleave >= 1.0 && <2.2,
@@ -47,8 +47,8 @@ library
                        containers >=0.5 && <0.6,
                        vector >=0.10 && <0.13,
                        vector-binary-instances >= 0.2 && < 0.3,
-                       errors >=2.0 && <2.3,
-                       exceptions >= 0.8 && < 0.9,
+                       errors >=2.0 && <2.4,
+                       exceptions >= 0.8 && < 0.11,
                        filepath >=1.3 && <1.5,
                        directory >=1.2 && <1.4,
                        mmap >=0.5 && <0.6
@@ -73,7 +73,6 @@ benchmark btree-benchmark
   type:                exitcode-stdio-1.0
   main-is:             Benchmark.hs
   hs-source-dirs:      benchmarks
-  default-language:    Haskell2010
   build-depends:       base,
                        b-tree,
                        pipes,
