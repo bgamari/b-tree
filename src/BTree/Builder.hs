@@ -116,12 +116,14 @@ buildNodes order size = {-# SCC "buildNodes" #-}
     isFilled :: BuildM k e m Bool
     isFilled = zoom (singular _head) $ do
         nodeCount <- use dNodeCount
-        minFill:_ <- use dMinFill
-        return $ nodeCount >= minFill
+        minFills <- use dMinFill
+        return $ case minFills of
+                   minFill:_ -> nodeCount >= minFill
+                   _ -> error "BTree.Builder.isFilled: minFills empty"
 
     emitNode :: BuildM k e m (OnDisk (BTree k OnDisk e))
     emitNode = do
-        (k0,node0):nodes <- zoom (singular _head) $ do
+        nodes <- zoom (singular _head) $ do
             nodes <- uses dNodes F.toList
             dNodes .= Seq.empty
             dNodeCount .= 0
@@ -132,7 +134,8 @@ buildNodes order size = {-# SCC "buildNodes" #-}
         -- is wrong. nodes may be empty, for instance, when we are call from
         -- the [_] branch of flushAll.
 
-        let newNode = Node node0 (V.fromList nodes)
+        let (k0,node0):nodes' = nodes
+            newNode = Node node0 (V.fromList nodes')
         s <- get
         case s of
             [_] -> lift $ respond newNode
