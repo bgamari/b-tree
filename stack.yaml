@@ -1,0 +1,8 @@
+
+
+resolver: lts-13.22
+
+packages:
+ - ./
+extra-deps:
+- pipes-interleave-1.1.3@sha256:8a526c6784dad7eb70d8873f13ba622724f986f074246d6e2db81a79bd9e59e6,965
