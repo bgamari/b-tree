@@ -10,7 +10,6 @@ module BTree.BinaryList
     , stream
       -- * Other queries
     , length
-    , filePath
     ) where
 
 import Control.Applicative
@@ -31,12 +30,8 @@ import Pipes
 import BTree.BinaryFile
 
 -- | A file containing a finite list of binary encoded items
-newtype BinaryList a = BinList FilePath
+newtype BinaryList a = BinList Handle
                      deriving (Show)
-
--- | Get the path to the @BinaryList@ file
-filePath :: BinaryList a -> FilePath
-filePath (BinList f) = f
 
 data Header = Header { hdrLength :: Word64 }
             deriving (Show)
@@ -47,9 +42,9 @@ instance B.Binary Header where
 
 -- | Encode the items of the given producer
 toBinaryList :: forall m a r. (MonadMask m, MonadIO m, B.Binary a)
-             => FilePath -> Producer a m r -> m (BinaryList a, r)
+             => Handle -> Producer a m r -> m (BinaryList a, r)
 toBinaryList fname producer = do
-    writeWithHeader fname (go 0 producer BB.empty)
+    hWriteWithHeader fname (go 0 producer BB.empty)
   where
     go :: Int -> Producer a m r -> BB.Builder
        -> Producer LBS.ByteString m (Header, (BinaryList a, r))
@@ -71,12 +66,16 @@ toBinaryList fname producer = do
 -- | Open a 'BinaryList' file.
 --
 -- TODO: Sanity checking at open time.
-open :: FilePath -> BinaryList a
-open = BinList
+open :: Handle -> BinaryList a
+open = BinList 
+{-# INLINE open #-}
 
 withHeader :: (MonadMask m, MonadIO m)
-           => BinaryList a -> (Header -> Handle -> m b) -> ExceptT String m b
-withHeader (BinList fname) action = readWithHeader fname action
+           => BinaryList a 
+           -> (Header -> Handle -> m b) 
+           -> ExceptT String m b
+
+withHeader (BinList fhandle) action = hReadWithHeader fhandle action
 
 length :: (MonadMask m, MonadIO m)
        => BinaryList a -> ExceptT String m Word64

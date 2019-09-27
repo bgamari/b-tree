@@ -2,7 +2,9 @@
 -- a trailing "header".
 module BTree.BinaryFile
     ( writeWithHeader
+    , hWriteWithHeader
     , readWithHeader
+    , hReadWithHeader
     ) where
 
 import Control.Monad (when)
@@ -79,8 +81,16 @@ readWithHeader :: (MonadMask m, MonadIO m, B.Binary hdr)
                => FilePath
                -> (hdr -> Handle -> m a)
                -> ExceptT String m a
-readWithHeader fname action = do
-    r <- lift $ bracket (liftIO $ openFile fname ReadMode) (liftIO . hClose) $ \h -> runExceptT $ do
+readWithHeader fname action = ExceptT $ bracket (liftIO $ openFile fname ReadMode) (liftIO . hClose) 
+                                      $ \h -> runExceptT $ hReadWithHeader h action
+
+
+hReadWithHeader :: (MonadMask m, MonadIO m, B.Binary hdr)
+                => Handle
+                -> (hdr -> Handle -> m a)
+                -> ExceptT String m a
+
+hReadWithHeader h action = do 
         -- read epilogue
         liftIO $ hSeek h SeekFromEnd (-epiLength)
         epiBytes <- liftIO (LBS.hGet h $ fromIntegral epiLength)
@@ -96,4 +106,3 @@ readWithHeader fname action = do
         liftIO $ hSeek h AbsoluteSeek 0
         lift $ action hdr h
 
-    ExceptT $ return r

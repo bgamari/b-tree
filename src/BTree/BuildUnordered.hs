@@ -28,11 +28,11 @@ import BTree.Builder
 maxChunkMerge :: Int
 maxChunkMerge = 100
 
-tempFilePath :: FilePath -> String -> IO FilePath
-tempFilePath dir template = do
-    (fname, h) <- liftIO $ openTempFile dir template
-    hClose h
-    return fname
+
+type Resource = (FilePath,Handle)
+
+cleanResource :: Resource -> IO ()
+cleanResource (fname,fhandle) = hClose fhandle >> removeFile fname
 
 -- | Build a B-tree into the given file.
 --
@@ -50,11 +50,12 @@ fromUnorderedToFile :: forall m e k r.
                     -> Producer (BLeaf k e) m r   -- ^ 'Producer' of elements
                     -> ExceptT String m ()
 fromUnorderedToFile scratch maxChunk order dest producer = {-# SCC fromUnorderedToFile #-} do
-    bList <- fromUnorderedToList scratch maxChunk producer
-    size <- BL.length bList
-    stream <- {-# SCC stream #-} BL.stream bList
+    (bList,resource) <- fromUnorderedToList scratch maxChunk producer
+    size             <- BL.length bList
+    stream           <- {-# SCC stream #-} BL.stream bList
     lift $ {-# SCC buildTree #-} fromOrderedToFile order size dest stream
-    liftIO $ removeFile $ BL.filePath bList
+    liftIO $ cleanResource resource
+
 {-# INLINE fromUnorderedToFile #-}
 
 fromUnorderedToList :: forall m a r.
@@ -62,29 +63,30 @@ fromUnorderedToList :: forall m a r.
                     => FilePath                   -- ^ Path to scratch directory
                     -> Int                        -- ^ Maximum chunk size
                     -> Producer a m r             -- ^ 'Producer' of elements
-                    -> ExceptT String m (BL.BinaryList a)
-fromUnorderedToList scratch maxChunk producer = do
-    lift (execStateT (fillLists producer) []) >>= {-# SCC goMerge #-} goMerge
+                    -> ExceptT String m (BL.BinaryList a,Resource)
+fromUnorderedToList scratch maxChunk producer = lift (execStateT (fillLists producer) []) >>= {-# SCC goMerge #-} goMerge
   where
-    fillLists :: Producer a m r -> StateT [BL.BinaryList a] m r
+    fillLists :: Producer a m r -> StateT [(BL.BinaryList a,Resource)] m r
     fillLists prod = {-# SCC fillLists #-} do
-      fname <- liftIO $ tempFilePath scratch "chunk.list"
-      (leaves, rest) <- lift $ takeChunk maxChunk prod
-      (bList, ()) <- lift $ BL.toBinaryList fname $ each $ S.toAscList leaves
-      modify (bList:)
+      resource@(_,fhandle) <- liftIO $ openTempFile scratch "chunk.list"
+      (leaves, rest)  <- lift $ takeChunk maxChunk prod
+      (bList, ())     <- lift $ BL.toBinaryList fhandle $ each $ S.toAscList leaves
+      modify ((bList,resource):)
       case rest of
         Left r         -> return r
         Right nextProd -> fillLists nextProd
 
-    goMerge :: [BL.BinaryList a] -> ExceptT String m (BL.BinaryList a)
+    goMerge :: [(BL.BinaryList a,Resource)] -> ExceptT String m (BL.BinaryList a, Resource)
     goMerge [l] = return l
     goMerge ls = do
       ls'' <- forM (splitChunks maxChunkMerge ls) $ \ls'->do
-        fname <- liftIO $ tempFilePath scratch "merged.list"
-        list <- mergeLists fname ls'
-        liftIO $ mapM_ (removeFile . BL.filePath) ls'
-        return list
+        resource@(_, fhandle) <- liftIO $ openTempFile scratch "merged.list"
+        let (chunk,chunkResource) = unzip ls'
+        list <- mergeLists fhandle chunk
+        liftIO $ mapM_ cleanResource chunkResource
+        return (list,resource)
       goMerge ls''
+
 {-# INLINE fromUnorderedToList #-}
 
 -- | Split the list into chunks of bounded size and run each through a function
@@ -100,7 +102,7 @@ throwLeft :: Monad m => m (Either String r) -> m r
 throwLeft action = action >>= either error return
 
 mergeLists :: (B.Binary a, Ord a, MonadMask m, MonadIO m)
-           => FilePath
+           => Handle
            -> [BL.BinaryList a]
            -> ExceptT String m (BL.BinaryList a)
 mergeLists dest lists = do
