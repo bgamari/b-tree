@@ -12,13 +12,14 @@ git: git@github.com:bgamari/b-tree
 library:
   source-dirs: src
   other-extensions:
+  - BangPatterns
   - DeriveGeneric
   - FlexibleContexts
+  - GeneralizedNewtypeDeriving
+  - LambdaCase
+  - StandaloneDeriving
   - TemplateHaskell
   - UndecidableInstances
-  - StandaloneDeriving
-  - BangPatterns
-  - GeneralizedNewtypeDeriving
   ghc-options: -Wall
   exposed-modules:
   - BTree

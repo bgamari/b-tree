@@ -3,6 +3,7 @@
 module BTree.Walk ( walkLeaves
                   , walkNodes
                   , walkNodesWithOffset
+                  , walkNodesWithOffsetAfter
                   ) where
 
 import BTree.Types
@@ -13,6 +14,9 @@ import qualified Pipes.Prelude as PP
 import Data.Binary
 import Data.Binary.Get (runGetOrFail)
 import Control.Lens
+import BTree.Lookup (fetch) 
+import qualified Data.Vector as V
+import Control.Monad
 
 -- If we only look at leaves keys will increase monotonically as we
 -- progress through the file.
@@ -53,3 +57,27 @@ walkNodesWithOffset = go 0 . {-# SCC "buffer" #-}view ltData
                   then return (LBS.fromStrict rest, Nothing)
                   else go (offset+o) rest
 {-# INLINE walkNodesWithOffset #-}
+
+
+walkNodesWithOffsetAfter :: (Ord k, Binary k, Binary v, Monad m,MonadIO m, Show k)
+                         => k
+                         -> LookupTree k v
+                         -> Producer (BLeaf k v) m ()
+
+walkNodesWithOffsetAfter key tree = case _btRoot $ _ltHeader tree of
+                                      Nothing   -> return ()
+                                      Just root -> go $ fetch tree root
+  where 
+    go = \case
+           Leaf x@(BLeaf k _)
+              | k >= key      -> do yield x 
+
+              | otherwise     -> do return ()
+
+           Node x xs          -> do goList x (V.toList xs)
+
+    goList x  []           = go (fetch tree x)
+
+    goList x1 ((k,x2):xs)
+               | k < key   = goList x2 xs
+               | otherwise = go (fetch tree x1) >> goList x2 xs
