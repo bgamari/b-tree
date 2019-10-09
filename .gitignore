@@ -6,3 +6,5 @@ TODO
 .emacs.desktop
 dist
 dist-newstyle
+.stack-work/
+b-tree

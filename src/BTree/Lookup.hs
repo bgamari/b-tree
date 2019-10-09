@@ -3,6 +3,7 @@ module BTree.Lookup ( LookupTree
                     , fromByteString
                     , lookup
                     , size
+                    , fetch
                     ) where
 
 import Prelude hiding (lookup)
@@ -15,6 +16,7 @@ import Data.Binary
 import System.IO.MMap
 import BTree.Types
 
+-- TODO: move to BTree.BinaryFile
 fetch :: (Binary a) => LookupTree k e -> OnDisk a -> a
 fetch lt (OnDisk offset) =
     decode $ LBS.fromStrict $ BS.drop (fromIntegral offset) (lt^.ltData)
@@ -52,6 +54,15 @@ lookup lt k =
             rest
               | V.null rest -> Nothing
               | otherwise   -> go $ fetch lt $ snd $ V.last rest
+
+
+
+
+
+
+
+
+
 
 -- | How many keys are in a 'LookupTree'.
 size :: LookupTree k e -> Size

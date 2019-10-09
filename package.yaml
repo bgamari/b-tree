@@ -1,0 +1,65 @@
+name: b-tree
+version: '0.1.4'
+synopsis: Immutable disk-based B* trees
+description: Immutable disk-based B* trees
+category: Data
+author: Ben Gamari
+maintainer: bgamari.foss@gmail.com
+copyright: (c) 2014 Ben Gamari
+license: BSD3
+homepage: http://github.com/bgamari/b-tree
+git: git@github.com:bgamari/b-tree
+library:
+  source-dirs: src
+  other-extensions:
+  - BangPatterns
+  - DeriveGeneric
+  - FlexibleContexts
+  - GeneralizedNewtypeDeriving
+  - LambdaCase
+  - StandaloneDeriving
+  - TemplateHaskell
+  - UndecidableInstances
+  ghc-options: -Wall
+  exposed-modules:
+  - BTree
+  - BTree.BinaryList
+  dependencies:
+  - base >=4.6 && <4.13
+  - mtl >=2.0 && <3.0
+  - pipes >=4.1 && <4.4
+  - pipes-interleave >=1.0 && <2.2
+  - bytestring >=0.10 && <0.11
+  - binary >=0.8.4 && <0.11
+  - transformers >=0.3 && <0.6
+  - lens >=3.10 && <4.18
+  - containers >=0.5 && <0.7
+  - vector >=0.10 && <0.13
+  - vector-binary-instances >=0.2 && <0.3
+  - errors >=2.0 && <2.4
+  - exceptions >=0.8 && <0.11
+  - filepath >=1.3 && <1.5
+  - directory >=1.2 && <1.4
+  - mmap >=0.5 && <0.6
+tests:
+  btree-quickcheck:
+    main: QuickCheck.hs
+    source-dirs: tests
+    dependencies:
+    - base
+    - containers
+    - pipes
+    - binary
+    - b-tree
+    - QuickCheck >=2.8.2
+    - tasty
+    - tasty-quickcheck
+benchmarks:
+  btree-benchmark:
+    main: Benchmark.hs
+    source-dirs: benchmarks
+    dependencies:
+    - base
+    - b-tree
+    - pipes
+    - criterion >=0.8 && <2.0

@@ -1,81 +1,93 @@
-name:                b-tree
-version:             0.1.4
-synopsis:            Immutable disk-based B* trees
-description:         Immutable disk-based B* trees
-homepage:            http://github.com/bgamari/b-tree
-license:             BSD3
-license-file:        LICENSE
-author:              Ben Gamari
-maintainer:          bgamari.foss@gmail.com
-copyright:           (c) 2014 Ben Gamari
-category:            Data
-build-type:          Simple
-cabal-version:       >=1.10
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.31.2.
+--
+-- see: https://github.com/sol/hpack
+--
+-- hash: 75e5224834801bdcd562d1165007ce48fe2da076410bcca562bfe7670ee02342
+
+name:           b-tree
+version:        0.1.4
+synopsis:       Immutable disk-based B* trees
+description:    Immutable disk-based B* trees
+category:       Data
+homepage:       http://github.com/bgamari/b-tree
+author:         Ben Gamari
+maintainer:     bgamari.foss@gmail.com
+copyright:      (c) 2014 Ben Gamari
+license:        BSD3
+license-file:   LICENSE
+build-type:     Simple
 
 source-repository head
-  type:                git
-  location:            git@github.com:bgamari/b-tree
+  type: git
+  location: git@github.com:bgamari/b-tree
 
 library
-  exposed-modules:     BTree,
-                       BTree.BinaryList
-  other-modules:       BTree.Types,
-                       BTree.Merge,
-                       BTree.Builder,
-                       BTree.Lookup,
-                       BTree.Walk,
-                       BTree.BinaryFile,
-                       BTree.BuildUnordered
-
-  other-extensions:    DeriveGeneric,
-                       FlexibleContexts,
-                       TemplateHaskell,
-                       UndecidableInstances,
-                       StandaloneDeriving,
-                       BangPatterns,
-                       GeneralizedNewtypeDeriving
-
-  hs-source-dirs:      src
-  build-depends:       base >=4.6 && <4.13,
-                       mtl >=2.0 && <3.0,
-                       pipes >=4.1 && <4.4,
-                       pipes-interleave >= 1.0 && <2.2,
-                       bytestring >=0.10 && <0.11,
-                       binary >=0.8.4 && <0.11,
-                       transformers >=0.3 && <0.6,
-                       lens >=3.10 && <4.18,
-                       containers >=0.5 && <0.7,
-                       vector >=0.10 && <0.13,
-                       vector-binary-instances >= 0.2 && < 0.3,
-                       errors >=2.0 && <2.4,
-                       exceptions >= 0.8 && < 0.11,
-                       filepath >=1.3 && <1.5,
-                       directory >=1.2 && <1.4,
-                       mmap >=0.5 && <0.6
-  default-language:    Haskell2010
-  ghc-options:         -Wall
+  exposed-modules:
+      BTree
+      BTree.BinaryList
+  other-modules:
+      BTree.BinaryFile
+      BTree.Builder
+      BTree.BuildUnordered
+      BTree.Lookup
+      BTree.Merge
+      BTree.Types
+      BTree.Walk
+      Paths_b_tree
+  hs-source-dirs:
+      src
+  other-extensions: DeriveGeneric FlexibleContexts TemplateHaskell UndecidableInstances StandaloneDeriving BangPatterns GeneralizedNewtypeDeriving
+  ghc-options: -Wall
+  build-depends:
+      base >=4.6 && <4.13
+    , binary >=0.8.4 && <0.11
+    , bytestring >=0.10 && <0.11
+    , containers >=0.5 && <0.7
+    , directory >=1.2 && <1.4
+    , errors >=2.0 && <2.4
+    , exceptions >=0.8 && <0.11
+    , filepath >=1.3 && <1.5
+    , lens >=3.10 && <4.18
+    , mmap >=0.5 && <0.6
+    , mtl >=2.0 && <3.0
+    , pipes >=4.1 && <4.4
+    , pipes-interleave >=1.0 && <2.2
+    , transformers >=0.3 && <0.6
+    , vector >=0.10 && <0.13
+    , vector-binary-instances >=0.2 && <0.3
+  default-language: Haskell2010
 
 test-suite btree-quickcheck
-  type:                exitcode-stdio-1.0
-  main-is:             QuickCheck.hs
-  hs-source-dirs:      tests
-  default-language:    Haskell2010
-  build-depends:       base,
-                       containers,
-                       pipes,
-                       binary,
-                       b-tree,
-                       QuickCheck >= 2.8.2,
-                       tasty,
-                       tasty-quickcheck
+  type: exitcode-stdio-1.0
+  main-is: QuickCheck.hs
+  other-modules:
+      TestUnorderedMerge
+      Paths_b_tree
+  hs-source-dirs:
+      tests
+  build-depends:
+      QuickCheck >=2.8.2
+    , b-tree
+    , base
+    , binary
+    , containers
+    , pipes
+    , tasty
+    , tasty-quickcheck
+  default-language: Haskell2010
 
 benchmark btree-benchmark
-  type:                exitcode-stdio-1.0
-  main-is:             Benchmark.hs
-  hs-source-dirs:      benchmarks
-  default-language:    Haskell2010
-  build-depends:       base,
-                       b-tree,
-                       pipes,
-                       criterion >=0.8 && <2.0
-
+  type: exitcode-stdio-1.0
+  main-is: Benchmark.hs
+  other-modules:
+      Paths_b_tree
+  hs-source-dirs:
+      benchmarks
+  build-depends:
+      b-tree
+    , base
+    , criterion >=0.8 && <2.0
+    , pipes
+  default-language: Haskell2010
